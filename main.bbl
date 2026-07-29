@@ -1,0 +1,163 @@
+\begin{thebibliography}{24}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Blackwell(1956)]{blackwell1956analog}
+David Blackwell.
+\newblock An analog of the minimax theorem for vector payoffs.
+\newblock \emph{Pacific Journal of Mathematics}, 6\penalty0 (1):\penalty0 1--8,
+  1956.
+
+\bibitem[Cesa-Bianchi \& Lugosi(2006)Cesa-Bianchi and
+  Lugosi]{cesabianchi2006prediction}
+Nicol{\`o} Cesa-Bianchi and G{\'a}bor Lugosi.
+\newblock \emph{Prediction, Learning, and Games}.
+\newblock Cambridge University Press, 2006.
+
+\bibitem[Charpentier \& Fernandes-Machado(2026)Charpentier and
+  Fernandes-Machado]{charpentier2026decomposing}
+Arthur Charpentier and Agathe Fernandes-Machado.
+\newblock Decomposing probabilistic scores: Reliability, information loss and
+  uncertainty.
+\newblock \emph{arXiv preprint arXiv:2603.15232}, 2026.
+
+\bibitem[Chen et~al.(2026)Chen, Huang, Jordan, and Luo]{chen2026calibeating}
+Yurong Chen, Zhiyi Huang, Michael~I. Jordan, and Haipeng Luo.
+\newblock Calibeating made simple.
+\newblock In \emph{Proceedings of the 39th Conference on Learning Theory},
+  volume 336 of \emph{Proceedings of Machine Learning Research}, pp.\
+  1373--1398, 2026.
+
+\bibitem[de~Rooij \& van Erven(2009)de~Rooij and van
+  Erven]{derooij2009switching}
+Steven de~Rooij and Tim van Erven.
+\newblock Learning the switching rate by discretising bernoulli sources online.
+\newblock In \emph{Proceedings of the 12th International Conference on
+  Artificial Intelligence and Statistics}, volume~5 of \emph{Proceedings of
+  Machine Learning Research}, pp.\  432--439, 2009.
+
+\bibitem[Fichtl et~al.(2026)Fichtl, Guzm{\'a}n, and Mehta]{fichtl2026bregman}
+Maximilian Fichtl, Crist{\'o}bal Guzm{\'a}n, and Nishant~A. Mehta.
+\newblock Calibeating for general proper losses: A bregman divergence approach.
+\newblock \emph{arXiv preprint arXiv:2605.17269}, 2026.
+
+\bibitem[Fishelson et~al.(2025)Fishelson, Kleinberg, Okoroafor, Paes~Leme,
+  Schneider, and Teng]{fishelson2025full}
+Maxwell Fishelson, Robert Kleinberg, Princewill Okoroafor, Renato Paes~Leme,
+  Jon Schneider, and Yifeng Teng.
+\newblock Full swap regret and discretized calibration.
+\newblock \emph{arXiv preprint arXiv:2502.09332}, 2025.
+
+\bibitem[Foster \& Hart(2023)Foster and Hart]{foster2023calibeating}
+Dean~P. Foster and Sergiu Hart.
+\newblock {``Calibeating'': Beating Forecasters at Their Own Game}.
+\newblock \emph{Theoretical Economics}, 18\penalty0 (4):\penalty0 1441--1474,
+  2023.
+
+\bibitem[Foster \& Hart(2026)Foster and Hart]{foster2026proper}
+Dean~P. Foster and Sergiu Hart.
+\newblock Proper calibeating.
+\newblock \emph{arXiv preprint arXiv:2605.26703}, 2026.
+
+\bibitem[Foster \& Vohra(1998)Foster and Vohra]{foster1998asymptotic}
+Dean~P. Foster and Rakesh~V. Vohra.
+\newblock Asymptotic calibration.
+\newblock \emph{Biometrika}, 85\penalty0 (2):\penalty0 379--390, 1998.
+
+\bibitem[Frongillo et~al.(2026)Frongillo, Luo, Mehta, and
+  Schneider]{frongillo2026ucalibration}
+Rafael Frongillo, Haipeng Luo, Nishant~A. Mehta, and Jon Schneider.
+\newblock Toward simultaneously optimal regret in {U}-calibration.
+\newblock \emph{arXiv preprint arXiv:2606.18527}, 2026.
+
+\bibitem[Gupta \& Ramdas(2023)Gupta and Ramdas]{gupta2023online}
+Chirag Gupta and Aaditya Ramdas.
+\newblock Online platt scaling with calibeating.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine
+  Learning}, volume 202 of \emph{Proceedings of Machine Learning Research},
+  pp.\  12182--12204, 2023.
+
+\bibitem[Hu et~al.(2026{\natexlab{a}})Hu, Tian, and Yang]{hu2026optimal}
+Lunjia Hu, Kevin Tian, and Chutong Yang.
+\newblock Optimal recalibration of an online predictor.
+\newblock \emph{arXiv preprint arXiv:2607.19689}, 2026{\natexlab{a}}.
+
+\bibitem[Hu et~al.(2026{\natexlab{b}})Hu, Tian, and Yang]{hu2026simultaneous}
+Lunjia Hu, Kevin Tian, and Chutong Yang.
+\newblock Simultaneous blackwell approachability and applications to multiclass
+  omniprediction.
+\newblock \emph{arXiv preprint arXiv:2602.17577}, 2026{\natexlab{b}}.
+
+\bibitem[Kot{\l}owski et~al.(2016)Kot{\l}owski, Koolen, and
+  Malek]{kotlowski2016isotonic}
+Wojciech Kot{\l}owski, Wouter~M. Koolen, and Alan Malek.
+\newblock Online isotonic regression.
+\newblock In \emph{Proceedings of the 29th Conference on Learning Theory},
+  volume~49 of \emph{Proceedings of Machine Learning Research}, pp.\
+  1165--1189, 2016.
+
+\bibitem[Krizhevsky(2009)]{krizhevsky2009cifar}
+Alex Krizhevsky.
+\newblock Learning multiple layers of features from tiny images.
+\newblock Technical report, University of Toronto, 2009.
+
+\bibitem[Kuleshov \& Ermon(2017)Kuleshov and Ermon]{kuleshov2017estimating}
+Volodymyr Kuleshov and Stefano Ermon.
+\newblock Estimating uncertainty online against an adversary.
+\newblock In \emph{Proceedings of the 31st AAAI Conference on Artificial
+  Intelligence}, pp.\  2110--2116, 2017.
+
+\bibitem[Liu et~al.(2026)Liu, Luo, and Ratliff]{liu2026adaptive}
+Junyan Liu, Haipeng Luo, and Lillian~J. Ratliff.
+\newblock Adaptive calibration in non-stationary environments.
+\newblock \emph{arXiv preprint arXiv:2605.11490}, 2026.
+
+\bibitem[Luo et~al.(2025)Luo, Senapati, and Sharan]{luo2025kl}
+Haipeng Luo, Spandan Senapati, and Vatsal Sharan.
+\newblock Simultaneous swap regret minimization via {KL}-calibration.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2025.
+
+\bibitem[Okoroafor et~al.(2024)Okoroafor, Kleinberg, and
+  Sun]{okoroafor2024faster}
+Princewill Okoroafor, Bobby Kleinberg, and Wen Sun.
+\newblock Faster recalibration of an online predictor via approachability.
+\newblock In \emph{Proceedings of the 27th International Conference on
+  Artificial Intelligence and Statistics}, volume 238 of \emph{Proceedings of
+  Machine Learning Research}, pp.\  4690--4698, 2024.
+
+\bibitem[Platt(1999)]{platt1999probabilistic}
+John~C. Platt.
+\newblock Probabilistic outputs for support vector machines and comparisons to
+  regularized likelihood methods.
+\newblock In Alexander~J. Smola, Peter~L. Bartlett, Bernhard Sch{\"o}lkopf, and
+  Dale Schuurmans (eds.), \emph{Advances in Large Margin Classifiers}, pp.\
+  61--74. MIT Press, 1999.
+
+\bibitem[Radford et~al.(2021)Radford, Kim, Hallacy, Ramesh, Goh, Agarwal,
+  Sastry, Askell, Mishkin, Clark, Krueger, and Sutskever]{radford2021clip}
+Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh,
+  Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark,
+  Gretchen Krueger, and Ilya Sutskever.
+\newblock Learning transferable visual models from natural language
+  supervision.
+\newblock In \emph{Proceedings of the 38th International Conference on Machine
+  Learning}, volume 139 of \emph{Proceedings of Machine Learning Research},
+  pp.\  8748--8763, 2021.
+
+\bibitem[Reid \& Williamson(2010)Reid and Williamson]{reid2010composite}
+Mark~D. Reid and Robert~C. Williamson.
+\newblock Composite binary losses.
+\newblock \emph{Journal of Machine Learning Research}, 11:\penalty0 2387--2422,
+  2010.
+
+\bibitem[van Erven et~al.(2012)van Erven, Reid, and
+  Williamson]{vanerven2012mixability}
+Tim van Erven, Mark~D. Reid, and Robert~C. Williamson.
+\newblock Mixability is bayes risk curvature relative to log loss.
+\newblock \emph{Journal of Machine Learning Research}, 13\penalty0
+  (52):\penalty0 1639--1663, 2012.
+
+\end{thebibliography}
