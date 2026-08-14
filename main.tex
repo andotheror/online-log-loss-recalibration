@@ -1,7 +1,7 @@
 \documentclass{article}
 \usepackage{iclr2027_conference,times}
-\renewcommand{\iclrruler}[1]{}
-\renewcommand{\headrulewidth}{0pt}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \input{math_commands.tex}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage{booktabs}
@@ -23,9 +23,10 @@
 \newcommand{\simplex}{\Delta}
 
 \title{Near-Optimal Online Recalibration for Log Loss}
-\author{Pahan Dewasurendra \\ Johns Hopkins University \\ July 23, 2026}
+\author{\textbf{Pahan Dewasurendra} \\ Johns Hopkins University}
 
 % \iclrfinalcopy
+\hypersetup{pdftitle={Near-Optimal Online Recalibration for Log Loss},pdfauthor={Pahan Dewasurendra},pdfkeywords={near-optimal, online, recalibration, loss, replaces, arbitrary, forecast, sequence, predictions},pdfsubject={preprint}}
 \begin{document}
 \maketitle
 
@@ -1317,26 +1318,5 @@ Possible routes to a near-optimal high-probability theorem include a
 conditional-variance analysis tied to the oracle's mixing coefficient and a
 correlated rounding scheme. We have not proved either route. All theorems in
 the main paper are explicitly in expectation.
-
-\section{ICLR checklist}
-
-\begin{enumerate}
- \item \textbf{Claims:} The upper and lower bounds state their timing,
- expectation, loss, calibration metric, and parameter ranges. Grid novelty,
- a high-probability rate, multiclass extension, and removal of the logarithm
- are not claimed.
- \item \textbf{Proofs:} Full arguments appear in
- Appendices~\ref{app:oracle-proof}--\ref{app:upper-proof}. The only imported
- lower-bound component is identified in Section~\ref{sec:lower}.
- \item \textbf{Experiments:} Data provenance, stream construction,
- hyperparameters, seeds, metrics, and baseline limitations are reported in
- Appendix~\ref{app:experiments}. Code and raw JSON outputs are included in
- the supplement.
- \item \textbf{Compute:} Both reported suites run on a single node. The
- recalibration algorithms use CPUs. One GPU is used only to create the
- frozen CLIP features.
- \item \textbf{Assets:} CIFAR-10 and CLIP are public assets cited in the
- paper. No personally identifying or sensitive data are used.
-\end{enumerate}
 
 \end{document}
