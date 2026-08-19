@@ -31,139 +31,62 @@
 \maketitle
 
 \begin{abstract}
-Online recalibration replaces an arbitrary forecast sequence by predictions
-that are calibrated and nearly as accurate. Recent work attains the optimal
-$T=\Theta(\varepsilon^{-3})$ horizon for globally Lipschitz proper losses,
-but logarithmic loss is unbounded at probabilities zero and one. Naive
-clipping makes the existing bound polynomially worse. We give the first
-near-optimal recalibration guarantee for Bernoulli log loss without any
-restriction on the input forecasts. Our algorithm achieves expected ordinary
-$\ell_1$ calibration at most $\varepsilon$ and expected excess log loss at
-most $\varepsilon^2$ after
-$O(\varepsilon^{-3}\log(1/\varepsilon))$ rounds. A matching
-$\Omega(\varepsilon^{-3})$ lower bound leaves only one logarithmic factor.
-The key is a nonuniform mixture oracle controlled by adjacent KL tangent
-gaps, rather than by a global Lipschitz constant. A grid uniform in the
-Bernoulli information coordinate $\arcsin\sqrt p$ has
-$O(\varepsilon^{-1})$ points, probability mesh $O(\varepsilon)$, and
-labelwise tangent gap $O(\varepsilon^2)$ even at the boundary. Normalizing
-the loss objective and initializing the imbalanced meta learner at that
-objective prevents the growing clipped loss range from being paid twice.
-Experiments on controlled streams and a shifted CIFAR-10 binary stream
-evaluate the finite-time calibration and loss frontier. A fixed practical
-step choice reduces exact calibration error by $92.8\%$ on the shifted
-image stream while improving log loss. The result closes
-the unbounded-log-loss gap for arbitrary-hint online recalibration while
-making explicit which information-geometric ingredients are inherited from
-earlier log-loss discretization.
+Online recalibration replaces an arbitrary forecast sequence by predictions that are calibrated and nearly as accurate. Recent work attains the optimal $T=\Theta(\varepsilon^{-3})$ horizon for globally Lipschitz proper losses, but logarithmic loss is unbounded at probabilities zero and one. Naive clipping makes the existing bound polynomially worse. We give the first near-optimal recalibration guarantee for Bernoulli log loss without any restriction on the input forecasts. Our algorithm achieves expected ordinary $\ell_1$ calibration at most $\varepsilon$ and expected excess log loss at most $\varepsilon^2$ after $O(\varepsilon^{-3}\log(1/\varepsilon))$ rounds. A matching $\Omega(\varepsilon^{-3})$ lower bound leaves only one logarithmic factor. The key is a nonuniform mixture oracle controlled by adjacent KL tangent gaps, rather than by a global Lipschitz constant. A grid uniform in the Bernoulli information coordinate $\arcsin\sqrt p$ has $O(\varepsilon^{-1})$ points, probability mesh $O(\varepsilon)$, and labelwise tangent gap $O(\varepsilon^2)$ even at the boundary. Normalizing the loss objective and initializing the imbalanced meta learner at that objective prevents the growing clipped loss range from being paid twice. Experiments on controlled streams and a shifted CIFAR-10 binary stream evaluate the finite-time calibration and loss frontier. A fixed practical step choice reduces exact calibration error by $92.8\%$ on the shifted image stream while improving log loss. The result closes the unbounded-log-loss gap for arbitrary-hint online recalibration while making explicit which information-geometric ingredients are inherited from earlier log-loss discretization.
 \end{abstract}
 
 \section{Introduction}
 
-Probability forecasts are often optimized for a proper loss, then adjusted
-to improve calibration. In the online formulation, an arbitrary hint
-$q_t\in[0,1]$ arrives on round $t$. A recalibrator replaces it by
-$p_t\in[0,1]$ before observing the binary outcome $y_t$. Its two goals are
-different. Predictions with the same reported probability should have the
-right empirical frequency, while their average loss should remain close to
-that of the hints.
+Probability forecasts are often optimized for a proper loss, then adjusted to improve calibration. In the online formulation, an arbitrary hint $q_t\in[0,1]$ arrives on round $t$. A recalibrator replaces it by $p_t\in[0,1]$ before observing the binary outcome $y_t$. Its two goals are different. Predictions with the same reported probability should have the right empirical frequency, while their average loss should remain close to that of the hints.
 
-Kuleshov and Ermon introduced this adversarial recalibration problem
-\citep{kuleshov2017estimating}. Blackwell-style methods later improved its
-finite-time rates \citep{okoroafor2024faster}. Most recently,
-\citet{hu2026optimal} proved that $(\varepsilon,\varepsilon^2)$
-recalibration is possible in $\Theta(\varepsilon^{-3})$ rounds for
-globally Lipschitz proper losses. This is the statistically natural target:
-calibration is controlled at scale $\varepsilon$, while the loss cost of a
-local probability correction is controlled at scale $\varepsilon^2$.
+Kuleshov and Ermon introduced this adversarial recalibration problem \citep{kuleshov2017estimating}. Blackwell-style methods later improved its finite-time rates \citep{okoroafor2024faster}. Most recently, \citet{hu2026optimal} proved that $(\varepsilon,\varepsilon^2)$ recalibration is possible in $\Theta(\varepsilon^{-3})$ rounds for globally Lipschitz proper losses. This is the statistically natural target: calibration is controlled at scale $\varepsilon$, while the loss cost of a local probability correction is controlled at scale $\varepsilon^2$.
 
 Log loss is the central exception. For $y\in\{0,1\}$,
 \begin{equation}
   \ell_{\log}(p,y)=-y\log p-(1-y)\log(1-p).
   \label{eq:logloss}
 \end{equation}
-Its derivative and range diverge at the probability boundary.
-\citet{hu2026optimal} explicitly leave open whether their Lipschitz
-assumption is necessary and mention clipping as a practical approximation.
-To tolerate arbitrary hints, clipping must reach
-$\delta=O(\varepsilon^2)$. The resulting Lipschitz constant is
-$\Theta(\varepsilon^{-2})$, so direct use of their theorem gives the
-uninformative horizon $O(\varepsilon^{-7})$.
+Its derivative and range diverge at the probability boundary. \citet{hu2026optimal} explicitly leave open whether their Lipschitz assumption is necessary and mention clipping as a practical approximation. To tolerate arbitrary hints, clipping must reach $\delta=O(\varepsilon^2)$. The resulting Lipschitz constant is $\Theta(\varepsilon^{-2})$, so direct use of their theorem gives the uninformative horizon $O(\varepsilon^{-7})$.
 
-The obstacle is not the total range of log loss. It is the local geometric
-error paid by the oracle that balances calibration against loss. A
-probability-uniform grid has badly distorted cells near zero and one. In the
-coordinate
+The obstacle is not the total range of log loss. It is the local geometric error paid by the oracle that balances calibration against loss. A probability-uniform grid has badly distorted cells near zero and one. In the coordinate
 \begin{equation}
   \theta(p)=\arcsin\sqrt p,
   \label{eq:fisher-coordinate}
 \end{equation}
-Bernoulli Fisher information is constant up to scale. Equal angular cells
-therefore shrink toward the boundary. This grid is classical
-\citep{derooij2009switching,kotlowski2016isotonic} and has recently been
-used for KL calibration \citep{luo2025kl,liu2026adaptive}. Our contribution
-is not the grid. It is a two-objective oracle and analysis that make this
-geometry compatible with arbitrary hints and ordinary calibration.
+Bernoulli Fisher information is constant up to scale. Equal angular cells therefore shrink toward the boundary. This grid is classical \citep{derooij2009switching,kotlowski2016isotonic} and has recently been used for KL calibration \citep{luo2025kl,liu2026adaptive}. Our contribution is not the grid. It is a two-objective oracle and analysis that make this geometry compatible with arbitrary hints and ordinary calibration.
 
-The oracle mixes at most two adjacent grid points. Its calibration error is
-the probability width of the cell. Its loss error is an oriented tangent
-gap, which is a normalized adjacent Bernoulli KL divergence. On the grid in
-Equation~(\ref{eq:fisher-coordinate}), these two errors are respectively
-$O(\varepsilon)$ and $O(\varepsilon^2)$ using only
-$O(\varepsilon^{-1})$ actions. Clipping then costs only
-$O(\varepsilon^2)$ in the one-sided comparison with the original hint.
+The oracle mixes at most two adjacent grid points. Its calibration error is the probability width of the cell. Its loss error is an oriented tangent gap, which is a normalized adjacent Bernoulli KL divergence. On the grid in Equation~(\ref{eq:fisher-coordinate}), these two errors are respectively $O(\varepsilon)$ and $O(\varepsilon^2)$ using only $O(\varepsilon^{-1})$ actions. Clipping then costs only $O(\varepsilon^2)$ in the one-sided comparison with the original hint.
 
-One further issue remains. The clipped log-loss range is
-$M=O(\log(1/\varepsilon))$. A generic range-based approachability bound
-would pay $M^2$. We scale the loss coordinate by $M$ and initialize the
-two-objective meta learner at the loss vertex. The loss comparator then has
-zero initial divergence. Choosing its step size at
-$\Theta(\varepsilon^2/M)$ pays $M$ only once.
+One further issue remains. The clipped log-loss range is $M=O(\log(1/\varepsilon))$. A generic range-based approachability bound would pay $M^2$. We scale the loss coordinate by $M$ and initialize the two-objective meta learner at the loss vertex. The loss comparator then has zero initial divergence. Choosing its step size at $\Theta(\varepsilon^2/M)$ pays $M$ only once.
 
 Our contributions are:
 \begin{enumerate}
   \item We give a nonuniform mixture linear optimization oracle whose
-  calibration tolerance is the grid mesh and whose proper-loss tolerance is
-  an adjacent tangent gap. This replaces global Lipschitz control by local
-  Bayes regret.
+calibration tolerance is the grid mesh and whose proper-loss tolerance is an adjacent tangent gap. This replaces global Lipschitz control by local Bayes regret.
   \item We instantiate the oracle for log loss with a Fisher-uniform grid.
-  For arbitrary hints, including zero and one, the resulting algorithm
-  achieves expected $(\varepsilon,\varepsilon^2)$ recalibration in
-  $O(\varepsilon^{-3}\log(1/\varepsilon))$ rounds.
+For arbitrary hints, including zero and one, the resulting algorithm achieves expected $(\varepsilon,\varepsilon^2)$ recalibration in $O(\varepsilon^{-3}\log(1/\varepsilon))$ rounds.
   \item We transfer the recent recalibration hard instance through Pinsker's
-  inequality to prove an $\Omega(\varepsilon^{-3})$ lower bound for log
-  loss.
+inequality to prove an $\Omega(\varepsilon^{-3})$ lower bound for log loss.
   \item We test the algorithm on boundary-sensitive controlled sequences and
-  on a public binary image-classification stream under distribution shift.
-  The evaluations report ordinary finite-grid calibration and realized log
-  excess, rather than only the mixed-action surrogate used by the oracle.
+on a public binary image-classification stream under distribution shift. The evaluations report ordinary finite-grid calibration and realized log excess, rather than only the mixed-action surrogate used by the oracle.
 \end{enumerate}
 
 \section{Problem and background}
 \label{sec:problem}
 
 \paragraph{Protocol.}
-At round $t$, an environment reveals a hint $q_t\in[0,1]$. The learner then
-randomly predicts $p_t\in[0,1]$, after which $y_t\in\{0,1\}$ is revealed.
-The environment may depend on the past, but it may not observe the learner's
-fresh random draw before selecting $y_t$. Expectations below are only over
-learner randomization unless a stochastic lower-bound construction is stated.
+At round $t$, an environment reveals a hint $q_t\in[0,1]$. The learner then randomly predicts $p_t\in[0,1]$, after which $y_t\in\{0,1\}$ is revealed. The environment may depend on the past, but it may not observe the learner's fresh random draw before selecting $y_t$. Expectations below are only over learner randomization unless a stochastic lower-bound construction is stated.
 
-For a finite-valued prediction sequence, define ordinary $\ell_1$
-calibration as
+For a finite-valued prediction sequence, define ordinary $\ell_1$ calibration as
 \begin{equation}
   \calK_1(p_{1:T},y_{1:T})
   =\frac1T\sum_{s\in\operatorname{range}(p_{1:T})}
   \left|\sum_{t=1}^T \mathbf{1}\{p_t=s\}(s-y_t)\right|.
   \label{eq:k1}
 \end{equation}
-This definition charges each reported probability separately. In
-particular, it is not a binned diagnostic and does not merge nearby values.
+This definition charges each reported probability separately. In particular, it is not a binned diagnostic and does not merge nearby values.
 
 \begin{definition}[Log-loss recalibration]
-For $\varepsilon\in(0,1/4)$, a prediction sequence is
-$(\varepsilon,\varepsilon^2)$-recalibrated against
-$(q_{1:T},y_{1:T})$ if
+For $\varepsilon\in(0,1/4)$, a prediction sequence is $(\varepsilon,\varepsilon^2)$-recalibrated against $(q_{1:T},y_{1:T})$ if
 \begin{align}
   \mathbb{E}\calK_1(p_{1:T},y_{1:T})&\leq\varepsilon,
   \label{eq:target-cal}\\
@@ -172,17 +95,11 @@ $(q_{1:T},y_{1:T})$ if
   &\leq\varepsilon^2.
   \label{eq:target-loss}
 \end{align}
-The second inequality is one-sided. At boundary hints, it is interpreted in
-the extended-real sense.
+The second inequality is one-sided. At boundary hints, it is interpreted in the extended-real sense.
 \end{definition}
 
 \paragraph{Simultaneous approachability.}
-We build on the imbalanced simultaneous Blackwell framework of
-\citet{hu2026optimal}, itself based on simultaneous approachability
-\citep{hu2026simultaneous} and classical Blackwell approachability
-\citep{blackwell1956analog}. For a finite grid $\mathcal G$, an action
-$a\in\simplex^{\mathcal G}$ is a distribution over reports. The two payoff
-coordinates are
+We build on the imbalanced simultaneous Blackwell framework of \citet{hu2026optimal}, itself based on simultaneous approachability \citep{hu2026simultaneous} and classical Blackwell approachability \citep{blackwell1956analog}. For a finite grid $\mathcal G$, an action $a\in\simplex^{\mathcal G}$ is a distribution over reports. The two payoff coordinates are
 \begin{align}
  v^{(1)}(a,y)&=\{a_s(s-y)\}_{s\in\mathcal G},
  \label{eq:cal-payoff}\\
@@ -190,15 +107,9 @@ coordinates are
  [\ell_{\log}(s,y)-\ell_{\log}(\bar q,y)],
  \label{eq:loss-payoff}
 \end{align}
-where $\bar q$ is a clipped hint and $M$ is the clipped loss range.
-The first coordinate is tested by
-$u\in[-1,1]^{\mathcal G}$. Its support function is exactly
-Equation~(\ref{eq:k1}) when the realized reports are point masses. The second
-coordinate has the singleton test $1$.
+where $\bar q$ is a clipped hint and $M$ is the clipped loss range. The first coordinate is tested by $u\in[-1,1]^{\mathcal G}$. Its support function is exactly Equation~(\ref{eq:k1}) when the realized reports are point masses. The second coordinate has the singleton test $1$.
 
-Given weights $(\alpha,\beta)\in\simplex^2$, a mixture linear optimization
-oracle must choose one action that approximately satisfies both half-space
-constraints:
+Given weights $(\alpha,\beta)\in\simplex^2$, a mixture linear optimization oracle must choose one action that approximately satisfies both half-space constraints:
 \begin{equation}
  \alpha\langle u,v^{(1)}(a,y)\rangle
  +\beta v^{(2)}(a,q,y)
@@ -206,16 +117,12 @@ constraints:
  \quad\text{for both }y\in\{0,1\}.
  \label{eq:mloo-goal}
 \end{equation}
-The different tolerances are essential. We need
-$\epsilon_1=O(\varepsilon)$ and
-$M\epsilon_2=O(\varepsilon^2)$.
+The different tolerances are essential. We need $\epsilon_1=O(\varepsilon)$ and $M\epsilon_2=O(\varepsilon^2)$.
 
 \section{A curvature-adaptive mixture oracle}
 \label{sec:oracle}
 
-Let
-$\mathcal G=\{p_0<\cdots<p_N\}\subset(0,1)$ be symmetric about $1/2$.
-Define its extended probability mesh
+Let $\mathcal G=\{p_0<\cdots<p_N\}\subset(0,1)$ be symmetric about $1/2$. Define its extended probability mesh
 \begin{equation}
  h(\mathcal G)=\max\{p_0,1-p_N,\max_{i<N}(p_{i+1}-p_i)\}.
  \label{eq:mesh}
@@ -231,18 +138,11 @@ For adjacent $p<r$, define the oriented log tangent gap
  \end{cases}
  \label{eq:tangent-gap}
 \end{equation}
-Set $\tau(\mathcal G)=\max_{i<N}\tau(p_i,p_{i+1})$.
-The orientation in Equation~(\ref{eq:tangent-gap}) is selected by the side
-of $1/2$ containing the cell. It comes from the slope of the proper-loss
-support line, not from a symmetric smoothness bound.
+Set $\tau(\mathcal G)=\max_{i<N}\tau(p_i,p_{i+1})$. The orientation in Equation~(\ref{eq:tangent-gap}) is selected by the side of $1/2$ containing the cell. It comes from the slope of the proper-loss support line, not from a symmetric smoothness bound.
 
 \begin{lemma}[Nonuniform log-loss oracle]
 \label{lem:oracle}
-Clip $q$ to $\bar q\in[p_0,p_N]$ and let
-$M=\log(1/p_0)$ for a symmetric grid. For every
-$u\in[-1,1]^{\mathcal G}$ and
-$(\alpha,\beta)\in\simplex^2$, there is a distribution $a$ supported on one
-point or two adjacent points such that, for both labels,
+Clip $q$ to $\bar q\in[p_0,p_N]$ and let $M=\log(1/p_0)$ for a symmetric grid. For every $u\in[-1,1]^{\mathcal G}$ and $(\alpha,\beta)\in\simplex^2$, there is a distribution $a$ supported on one point or two adjacent points such that, for both labels,
 \begin{equation}
  \alpha\langle u,v^{(1)}(a,y)\rangle+
  \beta v^{(2)}(a,\bar q,y)
@@ -252,8 +152,7 @@ point or two adjacent points such that, for both labels,
 \end{equation}
 \end{lemma}
 
-The proof modifies the adjacent-line construction of
-\citet{okoroafor2024faster,hu2026optimal}. For $\alpha>0$, define
+The proof modifies the adjacent-line construction of \citet{okoroafor2024faster,hu2026optimal}. For $\alpha>0$, define
 \begin{equation}
  d(p,y)=\frac{\beta}{\alpha M}
  [\ell_{\log}(p,y)-\ell_{\log}(\bar q,y)]
@@ -261,10 +160,7 @@ The proof modifies the adjacent-line construction of
  f_i=(u_i p_i+d(p_i,0),u_i(p_i-1)+d(p_i,1)).
  \label{eq:f-curve}
 \end{equation}
-If a point is already below the target quadrant, a point mass works.
-Otherwise, the sequence contains an adjacent upper-left to lower-right
-crossing. For a crossing $p<r$ on the upper half, the vertical gap from the
-log-loss curve at $r$ to the support line at $p$ is exactly
+If a point is already below the target quadrant, a point mass works. Otherwise, the sequence contains an adjacent upper-left to lower-right crossing. For a crossing $p<r$ on the upper half, the vertical gap from the log-loss curve at $r$ to the support line at $p$ is exactly
 \begin{equation}
  \frac{\beta}{\alpha M}
  \left[
@@ -275,29 +171,17 @@ log-loss curve at $r$ to the support line at $p$ is exactly
  \frac{\KL(\Ber(p)\Vert\Ber(r))}{p}.
  \label{eq:gap-identity}
 \end{equation}
-Reflection gives the first case of Equation~(\ref{eq:tangent-gap}).
-Changing the calibration direction between adjacent points costs at most
-$r-p$. The two support lines then determine a mixture whose two label
-payoffs obey Equation~(\ref{eq:oracle-bound}). The endpoint residuals are at
-most $p_0$ and $1-p_N$, which explains the extended mesh. The case
-$\alpha=0$ follows by compactness. Appendix~\ref{app:oracle-proof} gives the
-full argument and a general proper-loss identity.
+Reflection gives the first case of Equation~(\ref{eq:tangent-gap}). Changing the calibration direction between adjacent points costs at most $r-p$. The two support lines then determine a mixture whose two label payoffs obey Equation~(\ref{eq:oracle-bound}). The endpoint residuals are at most $p_0$ and $1-p_N$, which explains the extended mesh. The case $\alpha=0$ follows by compactness. Appendix~\ref{app:oracle-proof} gives the full argument and a general proper-loss identity.
 
 \paragraph{Beyond log loss.}
-The oracle is not specific to KL divergence. If a differentiable binary
-proper loss has Bayes-risk weight $w(p)=-H''(p)$, replace the two oriented
-gaps in Equation~(\ref{eq:tangent-gap}) by
+The oracle is not specific to KL divergence. If a differentiable binary proper loss has Bayes-risk weight $w(p)=-H''(p)$, replace the two oriented gaps in Equation~(\ref{eq:tangent-gap}) by
 \begin{equation}
  \frac1p\int_p^r(t-p)w(t)\,dt
  \quad\text{and}\quad
  \frac1{1-r}\int_p^r(r-t)w(t)\,dt.
  \label{eq:general-gaps-main}
 \end{equation}
-The same mixture oracle holds. This gives a grid-dependent sufficient
-condition through local Bayes regret, with no global Lipschitz requirement.
-Log loss is the important unbounded case where one grid simultaneously
-controls these gaps, ordinary calibration resolution, clipping cost, and
-action count.
+The same mixture oracle holds. This gives a grid-dependent sufficient condition through local Bayes regret, with no global Lipschitz requirement. Log loss is the important unbounded case where one grid simultaneously controls these gaps, ordinary calibration resolution, clipping cost, and action count.
 
 \subsection{The Fisher grid}
 
@@ -308,11 +192,7 @@ Fix an angular resolution $a\in(0,\pi/8]$. Choose
  p_i=\sin^2\theta_i,
  \label{eq:grid}
 \end{equation}
-with equal angular spacing and symmetric endpoints.
-This construction is uniform in half the usual Fisher arc-length
-coordinate. It was introduced for Bernoulli log-loss discretization by
-\citet{derooij2009switching} and reused in online isotonic regression and KL
-calibration \citep{kotlowski2016isotonic,luo2025kl,liu2026adaptive}.
+with equal angular spacing and symmetric endpoints. This construction is uniform in half the usual Fisher arc-length coordinate. It was introduced for Bernoulli log-loss discretization by \citet{derooij2009switching} and reused in online isotonic regression and KL calibration \citep{kotlowski2016isotonic,luo2025kl,liu2026adaptive}.
 
 \begin{lemma}[Grid geometry]
 \label{lem:grid}
@@ -326,11 +206,7 @@ The grid in Equation~(\ref{eq:grid}) satisfies
 \end{equation}
 \end{lemma}
 
-The mesh bound follows because
-$\frac{d}{d\theta}\sin^2\theta=\sin2\theta\leq1$.
-For the tangent gap, let
-$p=\sin^2\theta<r=\sin^2\phi\leq1/2$ and
-$s=\phi-\theta\leq a\leq\theta$. The Bernoulli chi-squared bound gives
+The mesh bound follows because $\frac{d}{d\theta}\sin^2\theta=\sin2\theta\leq1$. For the tangent gap, let $p=\sin^2\theta<r=\sin^2\phi\leq1/2$ and $s=\phi-\theta\leq a\leq\theta$. The Bernoulli chi-squared bound gives
 \begin{align}
  \frac{\KL(\Ber(r)\Vert\Ber(p))}{1-r}
  &\leq\frac{(r-p)^2}{p(1-p)(1-r)} \nonumber\\
@@ -339,91 +215,70 @@ $s=\phi-\theta\leq a\leq\theta$. The Bernoulli chi-squared bound gives
  \leq72s^2.
  \label{eq:grid-proof}
 \end{align}
-The upper half follows by reflection. A central cell has both Bernoulli
-variances bounded below and satisfies the same loose constant.
+The upper half follows by reflection. A central cell has both Bernoulli variances bounded below and satisfies the same loose constant.
 
 \paragraph{Clipping is only second order.}
-Let $\delta=p_0=\sin^2a$ and
-$\bar q=\min\{\max\{q,\delta\},1-\delta\}$. For either label,
+Let $\delta=p_0=\sin^2a$ and $\bar q=\min\{\max\{q,\delta\},1-\delta\}$. For either label,
 \begin{equation}
  \ell_{\log}(\bar q,y)-\ell_{\log}(q,y)
  \leq-\log(1-\delta)=O(a^2).
  \label{eq:clip}
 \end{equation}
-The bound is one-sided, exactly as required for excess loss. No lower bound
-on the original hints is assumed.
+The bound is one-sided, exactly as required for excess loss. No lower bound on the original hints is assumed.
 
 \section{Near-optimal log-loss recalibration}
 \label{sec:algorithm}
 
-\method instantiates imbalanced simultaneous approachability with
-Lemma~\ref{lem:oracle}. It maintains a calibration distinguisher
-$u_t\in[-1,1]^{\mathcal G}$ and meta weights
-$w_t=(\alpha_t,\beta_t)\in\simplex^2$. The initialization is
+\method instantiates imbalanced simultaneous approachability with Lemma~\ref{lem:oracle}. It maintains a calibration distinguisher $u_t\in[-1,1]^{\mathcal G}$ and meta weights $w_t=(\alpha_t,\beta_t)\in\simplex^2$. The initialization is
 \begin{equation}
  u_1=0,\qquad w_1=(0,1).
  \label{eq:init}
 \end{equation}
-On each round, the oracle returns a sparse distribution $a_t$. The learner
-samples $p_t\sim a_t$ with fresh randomness before observing $y_t$.
-Afterward it performs projected gradient ascent on the calibration test:
+On each round, the oracle returns a sparse distribution $a_t$. The learner samples $p_t\sim a_t$ with fresh randomness before observing $y_t$. Afterward it performs projected gradient ascent on the calibration test:
 \begin{equation}
  u_{t+1}=\Pi_{[-1,1]^{\mathcal G}}
  \left(u_t+\zeta\{\mathbf{1}\{p_t=s\}(s-y_t)\}_{s\in\mathcal G}\right).
  \label{eq:u-update}
 \end{equation}
-The meta learner receives the two constraint residuals and performs
-Euclidean ascent on $\simplex^2$:
+The meta learner receives the two constraint residuals and performs Euclidean ascent on $\simplex^2$:
 \begin{equation}
  w_{t+1}=\Pi_{\simplex^2}(w_t+\gamma g_t).
  \label{eq:meta-update}
 \end{equation}
-For reduced variance, $g_t$ can use the known mixed payoff under $a_t$.
-Its conditional expectation equals the point-mass payoff required by the
-approachability proof. Algorithm~\ref{alg:logrecal} is written explicitly in
-Appendix~\ref{app:algorithm}.
+For reduced variance, $g_t$ can use the known mixed payoff under $a_t$. Its conditional expectation equals the point-mass payoff required by the approachability proof. Algorithm~\ref{alg:logrecal} is written explicitly in Appendix~\ref{app:algorithm}.
 
 \begin{theorem}[Expected log-loss recalibration]
 \label{thm:upper}
-There are universal constants $C,c>0$ such that the following holds.
-For any $\varepsilon\in(0,c)$, any horizon
+There are universal constants $C,c>0$ such that the following holds. For any $\varepsilon\in(0,c)$, any horizon
 \begin{equation}
  T\geq C\frac{\log(1/\varepsilon)}{\varepsilon^3},
  \label{eq:horizon}
 \end{equation}
-and every non-anticipating hint-label sequence, \method produces predictions
-satisfying Equations~(\ref{eq:target-cal}) and
-(\ref{eq:target-loss}).
+and every non-anticipating hint-label sequence, \method produces predictions satisfying Equations~(\ref{eq:target-cal}) and (\ref{eq:target-loss}).
 \end{theorem}
 
 \paragraph{Proof overview.}
-Run the construction at internal accuracy $\rho=c_0\varepsilon$ for a small
-constant $c_0$, choose $a=c_1\rho$, and set
+Run the construction at internal accuracy $\rho=c_0\varepsilon$ for a small constant $c_0$, choose $a=c_1\rho$, and set
 \begin{equation}
  M=\log(1/\sin^2a)=O(\log(1/\rho)),\qquad
  \zeta=\Theta(\rho),\qquad
  \gamma=\Theta(\rho^2/M).
  \label{eq:steps}
 \end{equation}
-By Lemmas~\ref{lem:oracle} and \ref{lem:grid}, the normalized oracle
-tolerances are
+By Lemmas~\ref{lem:oracle} and \ref{lem:grid}, the normalized oracle tolerances are
 \begin{equation}
  \epsilon_1=O(\rho),\qquad
  \epsilon_2=O(\rho^2/M).
  \label{eq:tolerances}
 \end{equation}
-All tested payoffs are bounded by a universal constant after normalization.
-Projected gradient ascent over the calibration cube gives average regret
+All tested payoffs are bounded by a universal constant after normalization. Projected gradient ascent over the calibration cube gives average regret
 \begin{equation}
  \frac{\operatorname{Reg}_{\rm cal}(T)}T
  =O(\rho)+O\left(\frac{|\mathcal G|}{\rho T}\right).
  \label{eq:cal-regret}
 \end{equation}
 
-The imbalanced meta bound has a useful asymmetry
-\citep{hu2026optimal}. Since $w_1$ is the loss vertex, the calibration
-comparator is at constant squared distance and the loss comparator is at
-zero distance. Therefore
+The imbalanced meta bound has a useful asymmetry \citep{hu2026optimal}. Since $w_1$ is the loss vertex, the calibration comparator is at constant squared distance and the loss comparator is at zero distance. Therefore
 \begin{align}
  \mathbb{E}\calK_1
  &\leq O(\rho)
@@ -435,44 +290,22 @@ zero distance. Therefore
  &\leq O(\rho^2)+O(M\gamma).
  \label{eq:upper-loss-bound}
 \end{align}
-The loss line has no $M/(\gamma T)$ term. This is the reason normalization
-removes one logarithmic factor rather than merely moving it.
-Using $|\mathcal G|=O(\rho^{-1})$ and
-$T=\Omega(M\rho^{-3})$ makes
-Equations~(\ref{eq:upper-cal-bound}) and
-(\ref{eq:upper-loss-bound}) respectively $O(\rho)$ and $O(\rho^2)$.
-Equation~(\ref{eq:clip}) adds $O(\rho^2)$ when replacing $\bar q_t$ by
-$q_t$. Constant rescaling gives the theorem.
-Appendix~\ref{app:upper-proof} includes the complete regret calculation and
-the conditional-unbiasedness argument for sampled reports.
+The loss line has no $M/(\gamma T)$ term. This is the reason normalization removes one logarithmic factor rather than merely moving it. Using $|\mathcal G|=O(\rho^{-1})$ and $T=\Omega(M\rho^{-3})$ makes Equations~(\ref{eq:upper-cal-bound}) and (\ref{eq:upper-loss-bound}) respectively $O(\rho)$ and $O(\rho^2)$. Equation~(\ref{eq:clip}) adds $O(\rho^2)$ when replacing $\bar q_t$ by $q_t$. Constant rescaling gives the theorem. Appendix~\ref{app:upper-proof} includes the complete regret calculation and the conditional-unbiasedness argument for sampled reports.
 
 \paragraph{Why a direct Lipschitz reduction fails.}
-To keep the clipping cost below $\varepsilon^2$, direct clipping needs
-$\delta=\Theta(\varepsilon^2)$. Log loss is then
-$L=\Theta(\varepsilon^{-2})$-Lipschitz. The
-$O(L^2\varepsilon^{-3})$ horizon of \citet{hu2026optimal} becomes
-$O(\varepsilon^{-7})$. In contrast, our oracle depends on adjacent KL
-tangent gaps, which remain $O(\varepsilon^2)$ under the boundary-refined
-grid.
+To keep the clipping cost below $\varepsilon^2$, direct clipping needs $\delta=\Theta(\varepsilon^2)$. Log loss is then $L=\Theta(\varepsilon^{-2})$-Lipschitz. The $O(L^2\varepsilon^{-3})$ horizon of \citet{hu2026optimal} becomes $O(\varepsilon^{-7})$. In contrast, our oracle depends on adjacent KL tangent gaps, which remain $O(\varepsilon^2)$ under the boundary-refined grid.
 
 \paragraph{Computational cost.}
-The grid has $O(\varepsilon^{-1})$ points. Evaluating all point and adjacent
-segment candidates takes $O(\varepsilon^{-1})$ time per round and the chosen
-action has support at most two. Appendix~\ref{app:implementation} describes
-the exact minimax scan used in our implementation.
+The grid has $O(\varepsilon^{-1})$ points. Evaluating all point and adjacent segment candidates takes $O(\varepsilon^{-1})$ time per round and the chosen action has support at most two. Appendix~\ref{app:implementation} describes the exact minimax scan used in our implementation.
 
 \section{A lower bound for log loss}
 \label{sec:lower}
 
-The logarithmic factor in Theorem~\ref{thm:upper} is the only remaining gap.
-The $\varepsilon^{-3}$ dependence itself is necessary even far from the
-boundary.
+The logarithmic factor in Theorem~\ref{thm:upper} is the only remaining gap. The $\varepsilon^{-3}$ dependence itself is necessary even far from the boundary.
 
 \begin{theorem}[Lower bound]
 \label{thm:lower}
-For all sufficiently small $\varepsilon$, any online learner that guarantees
-expected $O(\varepsilon)$ ordinary $\ell_1$ calibration and expected
-$O(\varepsilon^2)$ excess Bernoulli log loss on every sequence requires
+For all sufficiently small $\varepsilon$, any online learner that guarantees expected $O(\varepsilon)$ ordinary $\ell_1$ calibration and expected $O(\varepsilon^2)$ excess Bernoulli log loss on every sequence requires
 \begin{equation}
  T=\Omega(\varepsilon^{-3}).
  \label{eq:lower-rate}
@@ -481,9 +314,7 @@ This holds even when every hint lies in $[1/4,3/4]$.
 \end{theorem}
 
 \paragraph{Proof.}
-Use the hard construction of \citet{hu2026optimal}. The hints cycle through
-an $\varepsilon$-net of $[1/4,3/4]$, and conditional on the past,
-$y_t\sim\Ber(q_t)$. For every non-anticipating prediction $p_t$,
+Use the hard construction of \citet{hu2026optimal}. The hints cycle through an $\varepsilon$-net of $[1/4,3/4]$, and conditional on the past, $y_t\sim\Ber(q_t)$. For every non-anticipating prediction $p_t$,
 \begin{align}
  \mathbb{E}_t[
  \ell_{\log}(p_t,y_t)-\ell_{\log}(q_t,y_t)]
@@ -491,65 +322,30 @@ $y_t\sim\Ber(q_t)$. For every non-anticipating prediction $p_t$,
  &\geq2(q_t-p_t)^2.
  \label{eq:pinsker}
 \end{align}
-Thus expected log excess $O(\varepsilon^2)$ implies the same
-mean-squared-deviation premise, up to a constant, that drives their rounding
-and miscalibration proof. Round $p_t$ to the nearest point of their
-$\varepsilon$-net. Calibration increases by at most $\varepsilon$, while
-the average expected squared deviation remains $O(\varepsilon^2)$.
-Their bin-fluctuation lower bound then gives
-$T=\Omega(\varepsilon^{-3})$. This reduction uses the hard instance and
-proof, not merely the statement of their squared-loss theorem.
+Thus expected log excess $O(\varepsilon^2)$ implies the same mean-squared-deviation premise, up to a constant, that drives their rounding and miscalibration proof. Round $p_t$ to the nearest point of their $\varepsilon$-net. Calibration increases by at most $\varepsilon$, while the average expected squared deviation remains $O(\varepsilon^2)$. Their bin-fluctuation lower bound then gives $T=\Omega(\varepsilon^{-3})$. This reduction uses the hard instance and proof, not merely the statement of their squared-loss theorem.
 
 \paragraph{Interpretation.}
-The hard hints are bounded away from zero and one. Boundary singularity
-therefore does not create the lower bound. It creates the logarithmic gap in
-our upper bound through the clipped range $M$. Removing that factor appears
-to require either a range-free meta analysis or a different coupling of the
-two objectives.
+The hard hints are bounded away from zero and one. Boundary singularity therefore does not create the lower bound. It creates the logarithmic gap in our upper bound through the clipped range $M$. Removing that factor appears to require either a range-free meta analysis or a different coupling of the two objectives.
 
 \section{Experiments}
 \label{sec:experiments}
 
-The theory is worst-case and its prescribed horizons have large universal
-constants. Our experiments instead test three finite-time questions:
-whether \method preserves log loss while improving ordinary calibration,
-whether the Fisher grid helps on boundary-sensitive sequences, and whether
-the same behavior occurs for predictions from a public frozen
-representation under shift.
+The theory is worst-case and its prescribed horizons have large universal constants. Our experiments instead test three finite-time questions: whether \method preserves log loss while improving ordinary calibration, whether the Fisher grid helps on boundary-sensitive sequences, and whether the same behavior occurs for predictions from a public frozen representation under shift.
 
 \paragraph{Metrics.}
-We report $\calK_1$ from Equation~(\ref{eq:k1}), 20-bin expected calibration
-error (ECE), mean log loss, and excess log loss relative to the original
-hints. Unlike ECE, $\calK_1$ evaluates every distinct finite-grid report.
-All online methods see each outcome only after predicting it.
+We report $\calK_1$ from Equation~(\ref{eq:k1}), 20-bin expected calibration error (ECE), mean log loss, and excess log loss relative to the original hints. Unlike ECE, $\calK_1$ evaluates every distinct finite-grid report. All online methods see each outcome only after predicting it.
 
 \paragraph{Methods.}
-We compare the unmodified hints, nearest-grid online-SGD Platt scaling
-\citep{platt1999probabilistic}, HOPS \citep{gupta2023online} using the same
-Platt expert, a prefix histogram recalibrator, calibration-only
-approachability, the same two-objective algorithm on a probability-uniform
-grid of equal size, and \method on the Fisher grid. Rounding the Platt and
-histogram outputs to the evaluation grid makes their ordinary $\calK_1$
-finite and directly comparable. HOPS already has ten discrete outputs. The
-calibration-only ablation sets the meta weight on loss to zero. We report
-both the conservative theorem-motivated \method step and a fixed
-$16\times$ practical step selected on two controlled development streams.
+We compare the unmodified hints, nearest-grid online-SGD Platt scaling \citep{platt1999probabilistic}, HOPS \citep{gupta2023online} using the same Platt expert, a prefix histogram recalibrator, calibration-only approachability, the same two-objective algorithm on a probability-uniform grid of equal size, and \method on the Fisher grid. Rounding the Platt and histogram outputs to the evaluation grid makes their ordinary $\calK_1$ finite and directly comparable. HOPS already has ten discrete outputs. The calibration-only ablation sets the meta weight on loss to zero. We report both the conservative theorem-motivated \method step and a fixed $16\times$ practical step selected on two controlled development streams.
 
 \subsection{Controlled streams}
 
-We use six streams that isolate different failure modes: calibrated hints,
-a temperature distortion, a boundary shift, an oscillating distortion, a
-severe temperature shift, and hints placed exactly on Fisher-grid nodes.
-Each stream has $30{,}000$ rounds and five independent label and learner
-seeds. The boundary stream includes probabilities near zero and one. The
-node stream tests whether a geometry-aware method can leave already
-well-positioned hints unchanged.
+We use six streams that isolate different failure modes: calibrated hints, a temperature distortion, a boundary shift, an oscillating distortion, a severe temperature shift, and hints placed exactly on Fisher-grid nodes. Each stream has $30{,}000$ rounds and five independent label and learner seeds. The boundary stream includes probabilities near zero and one. The node stream tests whether a geometry-aware method can leave already well-positioned hints unchanged.
 
 \begin{table}[t]
 \centering
 \caption{Controlled online streams at $\varepsilon=0.1$. Each entry is the
-macro average over six streams, each with five seeds and $30{,}000$ rounds.
-Lower is better for $\calK_1$. Excess is relative to the original hints.}
+macro average over six streams, each with five seeds and $30{,}000$ rounds. Lower is better for $\calK_1$. Excess is relative to the original hints.}
 \label{tab:synthetic}
 \small
 \begin{tabular}{lrrr}
@@ -568,40 +364,16 @@ Equal-size uniform & .0456 & .0442 & -.0628\\
 \end{tabular}
 \end{table}
 
-The two-objective methods improve average log loss without the large cost of
-the calibration-only ablation. At the conservative theorem-motivated meta
-step, however, the base method corrects miscalibration more slowly than the
-specialized Platt, HOPS, and histogram baselines. The fixed practical step
-cuts its macro $\calK_1$ from $0.0479$ to $0.0233$ while increasing the
-log-loss improvement. The Fisher-node diagnostic is especially sharp. The
-hints have $\calK_1=0.0038$. Both \method variants retain zero log excess
-and the same $\calK_1$ to four digits. The equal-size uniform grid
-incurs $0.0010$ excess, while calibration-only approachability incurs
-$0.5872$. This is not evidence that a nonuniform grid always has smaller
-probability mesh. It verifies the intended boundary-preserving geometry
-when the hints already lie on its nodes. Appendix~\ref{app:experiments}
-also reports a prespecified sweep of the meta step, which traces the expected
-calibration-loss frontier. On the severe-temperature stream, multiplying
-the base step by 16 reduces \method's $\calK_1$ from $0.1217$ to $0.0234$
-while increasing its log-loss improvement from $0.2278$ to $0.3486$.
+The two-objective methods improve average log loss without the large cost of the calibration-only ablation. At the conservative theorem-motivated meta step, however, the base method corrects miscalibration more slowly than the specialized Platt, HOPS, and histogram baselines. The fixed practical step cuts its macro $\calK_1$ from $0.0479$ to $0.0233$ while increasing the log-loss improvement. The Fisher-node diagnostic is especially sharp. The hints have $\calK_1=0.0038$. Both \method variants retain zero log excess and the same $\calK_1$ to four digits. The equal-size uniform grid incurs $0.0010$ excess, while calibration-only approachability incurs $0.5872$. This is not evidence that a nonuniform grid always has smaller probability mesh. It verifies the intended boundary-preserving geometry when the hints already lie on its nodes. Appendix~\ref{app:experiments} also reports a prespecified sweep of the meta step, which traces the expected calibration-loss frontier. On the severe-temperature stream, multiplying the base step by 16 reduces \method's $\calK_1$ from $0.1217$ to $0.0234$ while increasing its log-loss improvement from $0.2278$ to $0.3486$.
 
 \subsection{Shifted CIFAR-10 binary stream}
 
-We form a public cat-versus-dog task from CIFAR-10
-\citep{krizhevsky2009cifar}. A logistic head is fit on $\ell_2$-normalized,
-frozen CLIP ViT-B/32 features \citep{radford2021clip} from the training
-split. It reaches $93.95\%$ accuracy on the $2{,}000$ relevant test images.
-We repeatedly present random permutations of those test images. Halfway
-through the stream, each label is independently flipped with probability
-$0.2$, while the original classifier probability remains the hint. This
-creates an abrupt calibration shift without retraining the representation or
-hint model.
+We form a public cat-versus-dog task from CIFAR-10 \citep{krizhevsky2009cifar}. A logistic head is fit on $\ell_2$-normalized, frozen CLIP ViT-B/32 features \citep{radford2021clip} from the training split. It reaches $93.95\%$ accuracy on the $2{,}000$ relevant test images. We repeatedly present random permutations of those test images. Halfway through the stream, each label is independently flipped with probability $0.2$, while the original classifier probability remains the hint. This creates an abrupt calibration shift without retraining the representation or hint model.
 
 \begin{table}[t]
 \centering
 \caption{Shifted CIFAR-10 cat-versus-dog stream at $\varepsilon=0.1$.
-The full run uses $200{,}000$ rounds per seed and five seeds. Entries are
-mean $\pm$ standard error.}
+The full run uses $200{,}000$ rounds per seed and five seeds. Entries are mean $\pm$ standard error.}
 \label{tab:cifar}
 \small
 \begin{tabular}{lrrrr}
@@ -629,115 +401,36 @@ Equal-size uniform & $.0162\mathbin{\pm}.0005$ & $.0146\mathbin{\pm}.0006$
 \end{tabular}
 \end{table}
 
-All two-objective methods improve both calibration and log loss after the
-shift. The base \method reduces $\calK_1$ by $79.8\%$. The fixed practical
-step reduces it by $92.8\%$ and improves mean log loss by $0.0740$ relative
-to the frozen hints. Calibration-only approachability
-achieves the smallest calibration error but pays $0.2444$ excess log loss,
-which exposes the need for the second objective. SGD Platt scaling is
-best in log loss on this repeated, one-dimensional shift, followed by its
-HOPS wrapper. The equal-size uniform ablation is stronger than the base
-\method but weaker than its fixed practical variant in calibration. Most
-hints are interior, where uniform-grid probability cells are smaller. This result
-distinguishes the theorem's boundary-uniform guarantee from an empirical
-claim that Fisher spacing dominates on every distribution.
+All two-objective methods improve both calibration and log loss after the shift. The base \method reduces $\calK_1$ by $79.8\%$. The fixed practical step reduces it by $92.8\%$ and improves mean log loss by $0.0740$ relative to the frozen hints. Calibration-only approachability achieves the smallest calibration error but pays $0.2444$ excess log loss, which exposes the need for the second objective. SGD Platt scaling is best in log loss on this repeated, one-dimensional shift, followed by its HOPS wrapper. The equal-size uniform ablation is stronger than the base \method but weaker than its fixed practical variant in calibration. Most hints are interior, where uniform-grid probability cells are smaller. This result distinguishes the theorem's boundary-uniform guarantee from an empirical claim that Fisher spacing dominates on every distribution.
 
-All settings, streams, metrics, and seeds were fixed before the full runs.
-The $16\times$ variant was selected from the prespecified two-stream sweep
-and then held fixed. Appendix~\ref{app:experiments} gives the stream
-equations, hyperparameters, per-seed values, and a short-run diagnostic used
-only to check the pipeline.
+All settings, streams, metrics, and seeds were fixed before the full runs. The $16\times$ variant was selected from the prespecified two-stream sweep and then held fixed. Appendix~\ref{app:experiments} gives the stream equations, hyperparameters, per-seed values, and a short-run diagnostic used only to check the pipeline.
 
 \section{Related work}
 \label{sec:related}
 
 \paragraph{Recalibration.}
-\citet{kuleshov2017estimating} use one calibration subroutine per hint bin
-and preserve bounded proper losses. \citet{okoroafor2024faster} introduce a
-faster approachability construction for Lipschitz proper losses.
-\citet{hu2026optimal} develop imbalanced simultaneous approachability,
-obtain the optimal $\Theta(\varepsilon^{-3})$ horizon for globally
-Lipschitz losses, and prove the hard instance used in
-Theorem~\ref{thm:lower}. Their theorem excludes log loss, and they leave the
-need for Lipschitzness open. Our result changes their oracle geometry and
-normalizes its unbounded loss coordinate.
+\citet{kuleshov2017estimating} use one calibration subroutine per hint bin and preserve bounded proper losses. \citet{okoroafor2024faster} introduce a faster approachability construction for Lipschitz proper losses. \citet{hu2026optimal} develop imbalanced simultaneous approachability, obtain the optimal $\Theta(\varepsilon^{-3})$ horizon for globally Lipschitz losses, and prove the hard instance used in Theorem~\ref{thm:lower}. Their theorem excludes log loss, and they leave the need for Lipschitzness open. Our result changes their oracle geometry and normalizes its unbounded loss coordinate.
 
 \paragraph{Calibration, swap regret, and calibeating.}
-Online calibration originates with \citet{foster1998asymptotic}.
-\citet{gupta2023online} wrap online Platt scaling with Foster's randomized
-forecaster. Because HOPS reports bin midpoints, its calibration error is
-ordinary $\calK_1$ on those outputs. It pairs a rate of order $T^{-1/4}$
-after tuning with a sharpness comparison, not with realized log-loss
-preservation relative to arbitrary hints.
-\citet{foster2023calibeating} study calibration while beating the refinement
-of other forecasts. Their long version explicitly treats the log score with
-pseudocount regularization and finite log grids, so simultaneous log
-calibration and log calibeating are not new in a qualitative sense.
-\citet{chen2026calibeating} give a no-regret treatment and an optimal finite
-action log-calibeating bound, while their simultaneous construction focuses
-on Brier loss. \citet{foster2026proper} provide a general proper-calibeating
-theory. \citet{fichtl2026bregman} extend calibeating through
-Bregman-divergence regret identities. Their loss-based FTRL handles
-unbounded log loss, and multiplicative binning handles arbitrary external
-forecasts. This is direct prior art for arbitrary-forecast log calibeating,
-but it does not give ordinary $\calK_1$ calibration of the replacement
-predictions together with a near-optimal
-$(\varepsilon,\varepsilon^2)$ finite-horizon guarantee. These objectives
-differ from near-optimal ordinary recalibration with realized loss
-preservation.
+Online calibration originates with \citet{foster1998asymptotic}. \citet{gupta2023online} wrap online Platt scaling with Foster's randomized forecaster. Because HOPS reports bin midpoints, its calibration error is ordinary $\calK_1$ on those outputs. It pairs a rate of order $T^{-1/4}$ after tuning with a sharpness comparison, not with realized log-loss preservation relative to arbitrary hints. \citet{foster2023calibeating} study calibration while beating the refinement of other forecasts. Their long version explicitly treats the log score with pseudocount regularization and finite log grids, so simultaneous log calibration and log calibeating are not new in a qualitative sense. \citet{chen2026calibeating} give a no-regret treatment and an optimal finite action log-calibeating bound, while their simultaneous construction focuses on Brier loss. \citet{foster2026proper} provide a general proper-calibeating theory. \citet{fichtl2026bregman} extend calibeating through Bregman-divergence regret identities. Their loss-based FTRL handles unbounded log loss, and multiplicative binning handles arbitrary external forecasts. This is direct prior art for arbitrary-forecast log calibeating, but it does not give ordinary $\calK_1$ calibration of the replacement predictions together with a near-optimal $(\varepsilon,\varepsilon^2)$ finite-horizon guarantee. These objectives differ from near-optimal ordinary recalibration with realized loss preservation.
 
-\citet{luo2025kl} connect KL calibration to log-loss swap regret and use a
-Fisher-uniform grid with specialized randomized rounding.
-\citet{fishelson2025full} relate full swap regret to several discretized
-calibration notions. \citet{liu2026adaptive} use the same angular geometry
-for pseudo-KL calibration under stochastic nonstationarity. None of these
-methods takes an unrestricted external hint and simultaneously preserves its
-realized log loss.
+\citet{luo2025kl} connect KL calibration to log-loss swap regret and use a Fisher-uniform grid with specialized randomized rounding. \citet{fishelson2025full} relate full swap regret to several discretized calibration notions. \citet{liu2026adaptive} use the same angular geometry for pseudo-KL calibration under stochastic nonstationarity. None of these methods takes an unrestricted external hint and simultaneously preserves its realized log loss.
 
 \paragraph{Proper losses and boundary-adapted geometry.}
-The derivative and Bregman structure of binary proper losses is developed by
-\citet{reid2010composite}, while \citet{vanerven2012mixability} characterize
-mixability through curvature relative to log loss. The grid used here goes
-back to \citet{derooij2009switching} and was also used for entropic online
-isotonic regression by \citet{kotlowski2016isotonic}. Recent work on
-U-calibration adapts to losses smooth relative to a log barrier, but covers
-bounded proper losses rather than log loss itself
-\citep{frongillo2026ucalibration}. Offline proper-score decompositions
-interpret log-loss improvement through reliability and retained information
-\citep{charpentier2026decomposing}. Our setting is adversarial, online, and
-finite horizon.
+The derivative and Bregman structure of binary proper losses is developed by \citet{reid2010composite}, while \citet{vanerven2012mixability} characterize mixability through curvature relative to log loss. The grid used here goes back to \citet{derooij2009switching} and was also used for entropic online isotonic regression by \citet{kotlowski2016isotonic}. Recent work on U-calibration adapts to losses smooth relative to a log barrier, but covers bounded proper losses rather than log loss itself \citep{frongillo2026ucalibration}. Offline proper-score decompositions interpret log-loss improvement through reliability and retained information \citep{charpentier2026decomposing}. Our setting is adversarial, online, and finite horizon.
 
 \section{Limitations and conclusion}
 \label{sec:conclusion}
 
-The guarantee is in expectation. Sampling the sparse action is needed for
-ordinary calibration. Near the boundary, a rare label can make the
-difference between two adjacent realized log losses constant even though
-their expected tangent gap is $O(\varepsilon^2)$. A range-only martingale
-bound would therefore require roughly $\varepsilon^{-4}$ rounds for a
-high-probability loss guarantee. A variance-sensitive argument may improve
-this, but we do not claim one.
+The guarantee is in expectation. Sampling the sparse action is needed for ordinary calibration. Near the boundary, a rare label can make the difference between two adjacent realized log losses constant even though their expected tangent gap is $O(\varepsilon^2)$. A range-only martingale bound would therefore require roughly $\varepsilon^{-4}$ rounds for a high-probability loss guarantee. A variance-sensitive argument may improve this, but we do not claim one.
 
-The remaining logarithmic factor may not be fundamental. The lower bound
-uses interior hints and gives $\Omega(\varepsilon^{-3})$. We also restrict
-the theorem to binary outcomes. Multiclass information geometry suggests an
-extension, but sparse simultaneous rounding near simplex faces is a separate
-problem.
+The remaining logarithmic factor may not be fundamental. The lower bound uses interior hints and gives $\Omega(\varepsilon^{-3})$. We also restrict the theorem to binary outcomes. Multiclass information geometry suggests an extension, but sparse simultaneous rounding near simplex faces is a separate problem.
 
-Within these boundaries, the result shows that unbounded log loss does not
-require a polynomial deterioration in online recalibration. The correct
-local quantity is adjacent Bayes regret, not a global derivative bound.
-Combining this curvature-adaptive oracle with an asymmetrically initialized
-meta learner yields a near-optimal arbitrary-hint guarantee.
+Within these boundaries, the result shows that unbounded log loss does not require a polynomial deterioration in online recalibration. The correct local quantity is adjacent Bayes regret, not a global derivative bound. Combining this curvature-adaptive oracle with an asymmetrically initialized meta learner yields a near-optimal arbitrary-hint guarantee.
 
 \section*{Reproducibility statement}
 
-Appendices~\ref{app:oracle-proof}, \ref{app:algorithm}, and
-\ref{app:implementation} specify the oracle and algorithm.
-Appendix~\ref{app:experiments} specifies data
-provenance, stream construction, baselines, hyperparameters, and seeds. The
-supplement includes source code, deterministic oracle tests, and machine
-readable raw results.
+Appendices~\ref{app:oracle-proof}, \ref{app:algorithm}, and \ref{app:implementation} specify the oracle and algorithm. Appendix~\ref{app:experiments} specifies data provenance, stream construction, baselines, hyperparameters, and seeds. The supplement includes source code, deterministic oracle tests, and machine readable raw results.
 
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}
@@ -747,23 +440,17 @@ readable raw results.
 \section{Proof of the nonuniform oracle}
 \label{app:oracle-proof}
 
-We first record the proper-loss geometry used by the oracle. For a
-differentiable binary proper loss $\ell$, let
-$H(p)=(1-p)\ell(p,0)+p\ell(p,1)$ be its Bayes risk and let
-$w(p)=-H''(p)\geq0$ be its weight function. Then
+We first record the proper-loss geometry used by the oracle. For a differentiable binary proper loss $\ell$, let $H(p)=(1-p)\ell(p,0)+p\ell(p,1)$ be its Bayes risk and let $w(p)=-H''(p)\geq0$ be its weight function. Then
 \begin{equation}
  \ell_0'(p)=p\,w(p),\qquad
  \ell_1'(p)=-(1-p)w(p).
  \label{eq:proper-derivatives}
 \end{equation}
-These identities hold almost everywhere under the usual weak regularity
-conditions \citep{reid2010composite}. The log loss has
-$w(p)=1/[p(1-p)]$.
+These identities hold almost everywhere under the usual weak regularity conditions \citep{reid2010composite}. The log loss has $w(p)=1/[p(1-p)]$.
 
 \begin{lemma}[Adjacent support gap]
 \label{lem:general-gap}
-Let $0<p<r<1$. The vertical gap from the loss curve at $r$ to the support
-line at $p$, whose direction is $(p,p-1)$, equals
+Let $0<p<r<1$. The vertical gap from the loss curve at $r$ to the support line at $p$, whose direction is $(p,p-1)$, equals
 \begin{equation}
  G_{\uparrow}(p,r)
  =\frac1p\int_p^r(t-p)w(t)\,dt.
@@ -786,13 +473,7 @@ For log loss, these quantities are
 \end{lemma}
 
 \begin{proof}
-The support line at $p$ has slope $(p-1)/p$. Its value at the first
-coordinate of the curve at $r$ is
-\[
- \ell(p,1)+\frac{p-1}{p}[\ell(r,0)-\ell(p,0)].
-\]
-Subtracting this from $\ell(r,1)$ and applying
-Equation~(\ref{eq:proper-derivatives}) gives
+The support line at $p$ has slope $(p-1)/p$. Its value at the first coordinate of the curve at $r$ is \[ \ell(p,1)+\frac{p-1}{p}[\ell(r,0)-\ell(p,0)]. \] Subtracting this from $\ell(r,1)$ and applying Equation~(\ref{eq:proper-derivatives}) gives
 \begin{align*}
  &\ell(r,1)-\ell(p,1)
  -\frac{p-1}{p}[\ell(r,0)-\ell(p,0)]\\
@@ -800,9 +481,7 @@ Equation~(\ref{eq:proper-derivatives}) gives
  \left[-(1-t)+\frac{1-p}{p}t\right]w(t)\,dt
  =\frac1p\int_p^r(t-p)w(t)\,dt.
 \end{align*}
-Reflecting $p\mapsto1-p$ and exchanging labels proves the second identity.
-Substitution of $w(t)=1/[t(1-t)]$ and direct integration give
-Equation~(\ref{eq:log-gaps}).
+Reflecting $p\mapsto1-p$ and exchanging labels proves the second identity. Substitution of $w(t)=1/[t(1-t)]$ and direct integration give Equation~(\ref{eq:log-gaps}).
 \end{proof}
 
 \begin{proof}[Proof of Lemma~\ref{lem:oracle}]
@@ -818,8 +497,7 @@ It is useful to work with the unscaled two-label vectors
 \end{equation}
 The desired action is a convex combination of these vectors.
 
-Let $c_i^\perp=(1-p_i,p_i)$. Since
-$\langle c_i^\perp,(p_i,p_i-1)\rangle=0$, propriety gives
+Let $c_i^\perp=(1-p_i,p_i)$. Since $\langle c_i^\perp,(p_i,p_i-1)\rangle=0$, propriety gives
 \begin{align}
  \langle c_i^\perp,F_i\rangle
  &=\frac{\beta}{M}
@@ -833,39 +511,22 @@ $\langle c_i^\perp,(p_i,p_i-1)\rangle=0$, propriety gives
 \end{align}
 Thus no $F_i$ lies strictly in the positive quadrant.
 
-Write
-\[
- B=\alpha h(\mathcal G)+\frac{\beta}{M}\tau(\mathcal G).
-\]
-If some $F_i$ has both coordinates at most $B$, its point mass proves the
-claim. Otherwise, every $F_i$ has one coordinate greater than $B$.
-Equation~(\ref{eq:no-first-quadrant}) forces its other coordinate to be
-nonpositive, so each vector is either upper-left or lower-right.
+Write \[ B=\alpha h(\mathcal G)+\frac{\beta}{M}\tau(\mathcal G). \] If some $F_i$ has both coordinates at most $B$, its point mass proves the claim. Otherwise, every $F_i$ has one coordinate greater than $B$. Equation~(\ref{eq:no-first-quadrant}) forces its other coordinate to be nonpositive, so each vector is either upper-left or lower-right.
 
 At the lower endpoint, monotonicity of the partial loss implies
 \begin{equation}
  [F_0]_0\leq\alpha p_0\leq\alpha h(\mathcal G).
  \label{eq:left-endpoint}
 \end{equation}
-Thus its first coordinate is at most $B$. Since no point mass is sufficient,
-its second coordinate exceeds $B$, and $F_0$ is upper-left. The symmetric
-argument places $F_N$ in the lower-right quadrant. The finite sequence
-therefore has an adjacent pair $F_i,F_{i+1}$ that crosses from upper-left
-to lower-right.
+Thus its first coordinate is at most $B$. Since no point mass is sufficient, its second coordinate exceeds $B$, and $F_0$ is upper-left. The symmetric argument places $F_N$ in the lower-right quadrant. The finite sequence therefore has an adjacent pair $F_i,F_{i+1}$ that crosses from upper-left to lower-right.
 
-Suppose first that $p_i\geq1/2$. The line through the shifted and scaled loss
-curve at $p_i$ in direction $(p_i,p_i-1)$ is a supporting line.
-Lemma~\ref{lem:general-gap} shows that moving from the next curve point to
-this line costs vertically
+Suppose first that $p_i\geq1/2$. The line through the shifted and scaled loss curve at $p_i$ in direction $(p_i,p_i-1)$ is a supporting line. Lemma~\ref{lem:general-gap} shows that moving from the next curve point to this line costs vertically
 \begin{equation}
  \frac{\beta}{M}
  \frac{\KL(\Ber(p_i)\Vert\Ber(p_{i+1}))}{p_i}.
  \label{eq:upper-cell-cost}
 \end{equation}
-Let $\widetilde F_{i+1}$ be obtained in two steps. First replace the
-calibration direction at $p_{i+1}$ by the direction at $p_i$. Then move the
-loss point vertically onto its support line at $p_i$. Both $F_i$ and
-$\widetilde F_{i+1}$ now lie on that line, and coordinatewise
+Let $\widetilde F_{i+1}$ be obtained in two steps. First replace the calibration direction at $p_{i+1}$ by the direction at $p_i$. Then move the loss point vertically onto its support line at $p_i$. Both $F_i$ and $\widetilde F_{i+1}$ now lie on that line, and coordinatewise
 \begin{equation}
  \left|[F_{i+1}-\widetilde F_{i+1}]_j\right|
  \leq b_i
@@ -875,15 +536,7 @@ $\widetilde F_{i+1}$ now lie on that line, and coordinatewise
  \quad (j=0,1).
  \label{eq:modified-endpoint}
 \end{equation}
-Since $F_{i+1}$ is lower-right, its first coordinate exceeds $B$.
-Because $b_i\leq B$, the first coordinate of
-$\widetilde F_{i+1}$ is nonnegative. The support-line propriety inequality
-forces its second coordinate to be nonpositive. The segment from the
-upper-left vector $F_i$ to $\widetilde F_{i+1}$ therefore contains a point
-with first coordinate zero and second coordinate nonpositive. Apply the
-same mixing coefficient to $F_i$ and the original $F_{i+1}$. By
-Equation~(\ref{eq:modified-endpoint}), both coordinates of the resulting
-mixture are at most
+Since $F_{i+1}$ is lower-right, its first coordinate exceeds $B$. Because $b_i\leq B$, the first coordinate of $\widetilde F_{i+1}$ is nonnegative. The support-line propriety inequality forces its second coordinate to be nonpositive. The segment from the upper-left vector $F_i$ to $\widetilde F_{i+1}$ therefore contains a point with first coordinate zero and second coordinate nonpositive. Apply the same mixing coefficient to $F_i$ and the original $F_{i+1}$. By Equation~(\ref{eq:modified-endpoint}), both coordinates of the resulting mixture are at most
 \begin{equation}
  \alpha(p_{i+1}-p_i)+
  \frac{\beta}{M}
@@ -891,69 +544,22 @@ mixture are at most
  \label{eq:upper-crossing-bound}
 \end{equation}
 
-For $p_{i+1}\leq1/2$, exchange the labels and reflect the symmetric grid.
-Equation~(\ref{eq:upper-crossing-bound}) becomes
-\[
- \alpha(p_{i+1}-p_i)+
- \frac{\beta}{M}
- \frac{\KL(\Ber(p_{i+1})\Vert\Ber(p_i))}
- {1-p_{i+1}}.
-\]
-For a cell crossing $1/2$, use the larger of the two valid oriented bounds.
-The definitions of $h(\mathcal G)$ and $\tau(\mathcal G)$ now prove
-Equation~(\ref{eq:oracle-bound}).
+For $p_{i+1}\leq1/2$, exchange the labels and reflect the symmetric grid. Equation~(\ref{eq:upper-crossing-bound}) becomes \[ \alpha(p_{i+1}-p_i)+ \frac{\beta}{M} \frac{\KL(\Ber(p_{i+1})\Vert\Ber(p_i))} {1-p_{i+1}}. \] For a cell crossing $1/2$, use the larger of the two valid oriented bounds. The definitions of $h(\mathcal G)$ and $\tau(\mathcal G)$ now prove Equation~(\ref{eq:oracle-bound}).
 
-When $\alpha=0$, take a sequence $\alpha_k\downarrow0$. Every action
-constructed above lies in the finite union of closed adjacent edges of the
-simplex. A convergent subsequence therefore has an adjacent-support limit,
-and continuity on the clipped grid preserves the two inequalities.
+When $\alpha=0$, take a sequence $\alpha_k\downarrow0$. Every action constructed above lies in the finite union of closed adjacent edges of the simplex. A convergent subsequence therefore has an adjacent-support limit, and continuity on the clipped grid preserves the two inequalities.
 \end{proof}
 
 \section{Grid and clipping details}
 \label{app:grid-proof}
 
 \begin{proof}[Proof of Lemma~\ref{lem:grid}]
-Let the angular spacing be $s_i=\theta_{i+1}-\theta_i\leq a$.
-By construction, the grid has
-$1+\lceil(\pi/2-2a)/a\rceil=O(a^{-1})$ points.
-The mean value theorem and $\sin2\theta\leq1$ give
-$p_{i+1}-p_i\leq s_i\leq a$. Also
-$p_0=\sin^2a\leq a^2$, and symmetry gives
-$1-p_N=p_0$. This proves the first three claims.
+Let the angular spacing be $s_i=\theta_{i+1}-\theta_i\leq a$. By construction, the grid has $1+\lceil(\pi/2-2a)/a\rceil=O(a^{-1})$ points. The mean value theorem and $\sin2\theta\leq1$ give $p_{i+1}-p_i\leq s_i\leq a$. Also $p_0=\sin^2a\leq a^2$, and symmetry gives $1-p_N=p_0$. This proves the first three claims.
 
-For a lower-half cell, write
-$p=\sin^2\theta$, $r=\sin^2\phi$, and $s=\phi-\theta$.
-The first angle is $a$ and $s\leq a$, hence $s\leq\theta$.
-The Bernoulli chi-squared inequality gives the first line of
-Equation~(\ref{eq:grid-proof}). The trigonometric identity
-\[
- r-p=\sin(\phi+\theta)\sin s
-\]
-gives its second line. Since $\phi\leq\pi/4$ and
-$\phi\leq2\theta$, elementary bounds on sine and cosine yield
-\[
- \frac{\sin(\phi+\theta)}
- {\sin\theta\cos\theta}\leq6,
- \qquad
- \frac1{\cos^2\phi}\leq2.
-\]
-Together with $\sin s\leq s$, this proves the constant $72$. Upper-half
-cells follow by reflection. If a cell straddles $1/2$, then its endpoints
-lie in $[\sin^2(\pi/8),\sin^2(3\pi/8)]$ for $a\leq\pi/8$, and the same
-chi-squared calculation has a universal constant no larger than the stated
-loose bound.
+For a lower-half cell, write $p=\sin^2\theta$, $r=\sin^2\phi$, and $s=\phi-\theta$. The first angle is $a$ and $s\leq a$, hence $s\leq\theta$. The Bernoulli chi-squared inequality gives the first line of Equation~(\ref{eq:grid-proof}). The trigonometric identity \[ r-p=\sin(\phi+\theta)\sin s \] gives its second line. Since $\phi\leq\pi/4$ and $\phi\leq2\theta$, elementary bounds on sine and cosine yield \[ \frac{\sin(\phi+\theta)} {\sin\theta\cos\theta}\leq6, \qquad \frac1{\cos^2\phi}\leq2. \] Together with $\sin s\leq s$, this proves the constant $72$. Upper-half cells follow by reflection. If a cell straddles $1/2$, then its endpoints lie in $[\sin^2(\pi/8),\sin^2(3\pi/8)]$ for $a\leq\pi/8$, and the same chi-squared calculation has a universal constant no larger than the stated loose bound.
 \end{proof}
 
 \begin{proof}[Proof of Equation~(\ref{eq:clip})]
-Consider $q<\delta$. If $y=1$, clipping reduces the loss. If $y=0$, its
-increase is
-\[
- -\log(1-\delta)+\log(1-q)
- \leq-\log(1-\delta).
-\]
-The case $q>1-\delta$ follows by exchanging labels. Since
-$\delta=\sin^2a\leq a^2$ and $a\leq\pi/8$,
-$-\log(1-\delta)\leq C a^2$ for a universal constant $C$.
+Consider $q<\delta$. If $y=1$, clipping reduces the loss. If $y=0$, its increase is \[ -\log(1-\delta)+\log(1-q) \leq-\log(1-\delta). \] The case $q>1-\delta$ follows by exchanging labels. Since $\delta=\sin^2a\leq a^2$ and $a\leq\pi/8$, $-\log(1-\delta)\leq C a^2$ for a universal constant $C$.
 \end{proof}
 
 \section{Algorithm and upper-bound proof}
@@ -961,32 +567,18 @@ $-\log(1-\delta)\leq C a^2$ for a universal constant $C$.
 
 \begin{figure}[h]
 \centering
-\fbox{\begin{minipage}{0.94\linewidth}
-\textbf{Algorithm 1: \method}\\[2pt]
-\textbf{Input:} target $\rho$, Fisher grid $\mathcal G$, range $M$, steps
-$\zeta,\gamma$.\\
-\textbf{Initialize:} $u_1=0\in[-1,1]^{\mathcal G}$ and
-$w_1=(0,1)\in\simplex^2$.\\
+\fbox{\begin{minipage}{0.94\linewidth} \textbf{Algorithm 1: \method}\\[2pt] \textbf{Input:} target $\rho$, Fisher grid $\mathcal G$, range $M$, steps $\zeta,\gamma$.\\
+\textbf{Initialize:} $u_1=0\in[-1,1]^{\mathcal G}$ and $w_1=(0,1)\in\simplex^2$.\\
 \textbf{For} $t=1,\ldots,T$:
 \begin{enumerate}
  \item Observe $q_t$ and clip it to $\bar q_t\in[p_0,p_N]$.
  \item Apply Lemma~\ref{lem:oracle} to
- $(u_t,w_t,\bar q_t)$, obtaining $a_t$ on one point or two adjacent points.
+$(u_t,w_t,\bar q_t)$, obtaining $a_t$ on one point or two adjacent points.
  \item Sample $p_t\sim a_t$ with fresh randomness and report $p_t$.
  \item Observe $y_t$. Form
- $z_t^{(1)}=\{\mathbf1\{p_t=s\}(s-y_t)\}_{s\in\mathcal G}$ and update
- $u_{t+1}=\Pi_{[-1,1]^{\mathcal G}}(u_t+\zeta z_t^{(1)})$.
+$z_t^{(1)}=\{\mathbf1\{p_t=s\}(s-y_t)\}_{s\in\mathcal G}$ and update $u_{t+1}=\Pi_{[-1,1]^{\mathcal G}}(u_t+\zeta z_t^{(1)})$.
  \item Let $\bar z_t^{(1)}=\{a_{t,s}(s-y_t)\}_{s\in\mathcal G}$ and
- \[
- \bar z_t^{(2)}=\frac1M\sum_s a_{t,s}
- [\ell_{\log}(s,y_t)-\ell_{\log}(\bar q_t,y_t)].
- \]
- Form
- \[
- g_t=(\langle u_t,\bar z_t^{(1)}\rangle-\epsilon_1,
- \bar z_t^{(2)}-\epsilon_2)
- \]
- and update $w_{t+1}=\Pi_{\simplex^2}(w_t+\gamma g_t)$.
+\[ \bar z_t^{(2)}=\frac1M\sum_s a_{t,s} [\ell_{\log}(s,y_t)-\ell_{\log}(\bar q_t,y_t)]. \] Form \[ g_t=(\langle u_t,\bar z_t^{(1)}\rangle-\epsilon_1, \bar z_t^{(2)}-\epsilon_2) \] and update $w_{t+1}=\Pi_{\simplex^2}(w_t+\gamma g_t)$.
 \end{enumerate}
 \end{minipage}}
 \caption{Operational form of \method. The mixed meta feedback in step 5 is
@@ -997,19 +589,15 @@ conditionally equal in expectation to point-mass feedback.}
 \section{Proof of Theorem~\ref{thm:upper}}
 \label{app:upper-proof}
 
-Let $d=|\mathcal G|$. Both approachability pairings have magnitude at most
-one:
+Let $d=|\mathcal G|$. Both approachability pairings have magnitude at most one:
 \begin{equation}
  |\langle u,v^{(1)}(a,y)\rangle|\leq1,\qquad
  |v^{(2)}(a,\bar q,y)|\leq1.
  \label{eq:bounded-pairings}
 \end{equation}
-For the second inequality, every clipped partial log loss lies in
-$[0,M]$. The tolerance-subtracted two-vector used by the meta learner
-therefore has Euclidean norm at most a universal constant $B$.
+For the second inequality, every clipped partial log loss lies in $[0,M]$. The tolerance-subtracted two-vector used by the meta learner therefore has Euclidean norm at most a universal constant $B$.
 
-Projected online gradient ascent on the cube, initialized at zero and fed
-the sampled point-mass vectors $z_t^{(1)}$, satisfies
+Projected online gradient ascent on the cube, initialized at zero and fed the sampled point-mass vectors $z_t^{(1)}$, satisfies
 \begin{equation}
  \sup_{u\in[-1,1]^d}
  \frac1T\sum_{t=1}^T
@@ -1017,29 +605,21 @@ the sampled point-mass vectors $z_t^{(1)}$, satisfies
  \leq\frac{\zeta}{2}+\frac{d}{2\zeta T}.
  \label{eq:cube-regret}
 \end{equation}
-Here $\|z_t^{(1)}\|_2\leq1$ and
-$\|u-u_1\|_2^2\leq d$.
+Here $\|z_t^{(1)}\|_2\leq1$ and $\|u-u_1\|_2^2\leq d$.
 
-For the meta update, Euclidean online gradient ascent gives, for either
-vertex $e_i$,
+For the meta update, Euclidean online gradient ascent gives, for either vertex $e_i$,
 \begin{equation}
  \frac1T\sum_{t=1}^T\langle g_t,e_i-w_t\rangle
  \leq\frac{\gamma B^2}{2}
  +\frac{\|e_i-e_2\|_2^2}{2\gamma T}.
  \label{eq:meta-regret}
 \end{equation}
-Conditional on the history through $q_t$ and on the selected mixed action,
-the sampled calibration payoff has mean $\bar z_t^{(1)}$. The loss
-coordinate in Algorithm~\ref{alg:logrecal} is already the exact mixed mean.
-Thus the displayed $g_t$ is conditionally equal to the expected point-mass
-residual. The oracle inequality implies
+Conditional on the history through $q_t$ and on the selected mixed action, the sampled calibration payoff has mean $\bar z_t^{(1)}$. The loss coordinate in Algorithm~\ref{alg:logrecal} is already the exact mixed mean. Thus the displayed $g_t$ is conditionally equal to the expected point-mass residual. The oracle inequality implies
 \begin{equation}
  \mathbb{E}[\langle w_t,g_t\rangle\mid\mathcal F_t]\leq0.
  \label{eq:oracle-meta}
 \end{equation}
-Combining Equations~(\ref{eq:meta-regret}) and
-(\ref{eq:oracle-meta}) with $i=1$, then adding
-Equation~(\ref{eq:cube-regret}), yields
+Combining Equations~(\ref{eq:meta-regret}) and (\ref{eq:oracle-meta}) with $i=1$, then adding Equation~(\ref{eq:cube-regret}), yields
 \begin{equation}
  \mathbb{E}\calK_1
  \leq\epsilon_1+\frac{\zeta}{2}
@@ -1047,8 +627,7 @@ Equation~(\ref{eq:cube-regret}), yields
  +\frac{\gamma B^2}{2}+\frac1{\gamma T}.
  \label{eq:cal-complete}
 \end{equation}
-For $i=2$, the initial divergence vanishes and the loss test has zero
-regret, so
+For $i=2$, the initial divergence vanishes and the loss test has zero regret, so
 \begin{equation}
  \mathbb{E}\frac1T\sum_t
  \frac{\ell_{\log}(p_t,y_t)-\ell_{\log}(\bar q_t,y_t)}M
@@ -1056,33 +635,13 @@ regret, so
  \label{eq:loss-complete}
 \end{equation}
 
-Choose the grid with $a=c_1\rho$. Lemmas~\ref{lem:oracle} and
-\ref{lem:grid} give
-\[
- d\leq C_1/\rho,\quad
- \epsilon_1\leq C_2\rho,\quad
- M\epsilon_2\leq C_3\rho^2,\quad
- M\leq C_4\log(1/\rho).
-\]
-Set $\zeta=c_2\rho$ and $\gamma=c_3\rho^2/M$. If
-$T\geq C_5M\rho^{-3}$, Equation~(\ref{eq:cal-complete}) is at most
-$C_6\rho$ and Equation~(\ref{eq:loss-complete}), after multiplication by
-$M$, is at most $C_7\rho^2$. Clipping adds at most $C_8\rho^2$.
-Selecting $\rho$ as a sufficiently small constant multiple of the requested
-$\varepsilon$ proves both target inequalities.
+Choose the grid with $a=c_1\rho$. Lemmas~\ref{lem:oracle} and \ref{lem:grid} give \[ d\leq C_1/\rho,\quad \epsilon_1\leq C_2\rho,\quad M\epsilon_2\leq C_3\rho^2,\quad M\leq C_4\log(1/\rho). \] Set $\zeta=c_2\rho$ and $\gamma=c_3\rho^2/M$. If $T\geq C_5M\rho^{-3}$, Equation~(\ref{eq:cal-complete}) is at most $C_6\rho$ and Equation~(\ref{eq:loss-complete}), after multiplication by $M$, is at most $C_7\rho^2$. Clipping adds at most $C_8\rho^2$. Selecting $\rho$ as a sufficiently small constant multiple of the requested $\varepsilon$ proves both target inequalities.
 
 \paragraph{Adaptive sequences.}
-The only stochastic equality in the proof conditions on a history before
-the fresh draw $p_t\sim a_t$. Therefore the hints and labels may adapt to
-all previous predictions and outcomes. The current outcome may not depend on
-the current sampled report. This is the standard expected online
-recalibration timing.
+The only stochastic equality in the proof conditions on a history before the fresh draw $p_t\sim a_t$. Therefore the hints and labels may adapt to all previous predictions and outcomes. The current outcome may not depend on the current sampled report. This is the standard expected online recalibration timing.
 
 \paragraph{Several hint sequences.}
-If $m$ hints arrive each round, the aggregating algorithm for one-mixable
-log loss produces a single compressed hint whose excess to the best original
-hint is at most $(\log m)/T$ \citep{cesabianchi2006prediction}. Applying
-Theorem~\ref{thm:upper} to that hint gives the additive horizon
+If $m$ hints arrive each round, the aggregating algorithm for one-mixable log loss produces a single compressed hint whose excess to the best original hint is at most $(\log m)/T$ \citep{cesabianchi2006prediction}. Applying Theorem~\ref{thm:upper} to that hint gives the additive horizon
 \begin{equation}
  T=O\left(
  \frac{\log(1/\varepsilon)}{\varepsilon^3}
@@ -1094,89 +653,47 @@ Theorem~\ref{thm:upper} to that hint gives the additive horizon
 \section{Implementation details and deterministic checks}
 \label{app:implementation}
 
-For each grid point, the implementation forms the two label payoffs in
-Equation~(\ref{eq:mloo-goal}). It evaluates all point masses and every
-adjacent segment. On an adjacent edge, the maximum of two affine functions
-is minimized either at an endpoint or where the functions cross. The scan
-therefore returns the exact minimax action within the union of adjacent
-edges in linear time.
+For each grid point, the implementation forms the two label payoffs in Equation~(\ref{eq:mloo-goal}). It evaluates all point masses and every adjacent segment. On an adjacent edge, the maximum of two affine functions is minimized either at an endpoint or where the functions cross. The scan therefore returns the exact minimax action within the union of adjacent edges in linear time.
 
 The supplement includes the following deterministic checks:
 \begin{enumerate}
  \item exact minimax comparisons for random two-label arrays
  \item direct verification of Equation~(\ref{eq:oracle-bound}) on
- $21{,}225$ random oracle inputs over five target accuracies from $0.2$ to
- $0.0125$
+$21{,}225$ random oracle inputs over five target accuracies from $0.2$ to $0.0125$
  \item support size, adjacency, simplex projection, and sampled-feedback
- checks
+checks
  \item a $20{,}000$-round end-to-end run containing hints near both
- boundaries.
+boundaries.
 \end{enumerate}
-Across the same five accuracies, the measured Fisher-grid tangent gap was at
-most $0.064\varepsilon^2$. For a probability-uniform grid with the same
-number of points and endpoints, the ratio
-$\tau/\varepsilon^2$ grew from approximately $1.0$ at
-$\varepsilon=0.2$ to $32.1$ at $\varepsilon=0.0125$. These numerical checks
-are regression tests and are not used in the proof.
+Across the same five accuracies, the measured Fisher-grid tangent gap was at most $0.064\varepsilon^2$. For a probability-uniform grid with the same number of points and endpoints, the ratio $\tau/\varepsilon^2$ grew from approximately $1.0$ at $\varepsilon=0.2$ to $32.1$ at $\varepsilon=0.0125$. These numerical checks are regression tests and are not used in the proof.
 
 \section{Experimental details and full results}
 \label{app:experiments}
 
 \subsection{Controlled stream definitions}
 
-Every controlled stream cycles through a fixed set of hint levels and draws
-$y_t\sim\Ber(r_t)$ independently given its truth probability $r_t$.
-Let $\sigma$ be the logistic function. The six settings are:
+Every controlled stream cycles through a fixed set of hint levels and draws $y_t\sim\Ber(r_t)$ independently given its truth probability $r_t$. Let $\sigma$ be the logistic function. The six settings are:
 \begin{enumerate}
  \item \textbf{Calibrated:}
- $q_t$ cycles through $\sigma(\{-6,-5.7,\ldots,6\})$ and $r_t=q_t$.
+$q_t$ cycles through $\sigma(\{-6,-5.7,\ldots,6\})$ and $r_t=q_t$.
  \item \textbf{Temperature shift:}
- $q_t$ cycles through 41 equally spaced logits in $[-7,7]$. In the second
- half, $r_t=\sigma(\operatorname{logit}(q_t)/2.2+0.55)$.
+$q_t$ cycles through 41 equally spaced logits in $[-7,7]$. In the second half, $r_t=\sigma(\operatorname{logit}(q_t)/2.2+0.55)$.
  \item \textbf{Boundary shift:}
- $q_t$ cycles through
- $\{10^{-7},10^{-5},10^{-3},10^{-2},0.1,0.5,\allowbreak 0.9,0.99,
- 0.999,1-10^{-5},1-10^{-7}\}$.
- The truth changes from
- $\operatorname{clip}(0.03+0.94q_t)$ to
- $\operatorname{clip}(0.09+0.82q_t)$ halfway through.
+$q_t$ cycles through $\{10^{-7},10^{-5},10^{-3},10^{-2},0.1,0.5,\allowbreak 0.9,0.99, 0.999,1-10^{-5},1-10^{-7}\}$. The truth changes from $\operatorname{clip}(0.03+0.94q_t)$ to $\operatorname{clip}(0.09+0.82q_t)$ halfway through.
  \item \textbf{Oscillating:}
- 31 hint logits in $[-5,5]$ are transformed in blocks of $2{,}000$ rounds
- using temperatures $(0.65,1.8,0.9,2.6)$ and biases
- $(-0.3,0.5,0.2,-0.55)$.
+31 hint logits in $[-5,5]$ are transformed in blocks of $2{,}000$ rounds using temperatures $(0.65,1.8,0.9,2.6)$ and biases $(-0.3,0.5,0.2,-0.55)$.
  \item \textbf{Severe temperature:}
- $q_t$ cycles through 41 logits in $[-8,8]$ and
- $r_t=\sigma(\operatorname{logit}(q_t)/3+1)$.
+$q_t$ cycles through 41 logits in $[-8,8]$ and $r_t=\sigma(\operatorname{logit}(q_t)/3+1)$.
  \item \textbf{Fisher nodes:}
- the first 20, center, and last 20 Fisher-grid points are used as both hints
- and truth.
+the first 20, center, and last 20 Fisher-grid points are used as both hints and truth.
 \end{enumerate}
-Truth probabilities in the boundary stream are clipped to
-$[10^{-5},1-10^{-5}]$.
+Truth probabilities in the boundary stream are clipped to $[10^{-5},1-10^{-5}]$.
 
 \subsection{Hyperparameters and baselines}
 
-The target is $\varepsilon=0.1$. The Fisher grid has 125 points. The
-calibration step is $\varepsilon/4$, and the meta step is
-$\varepsilon^2/(8M)$. The equal-size uniform baseline shares the Fisher
-endpoints and number of points. Calibration-only uses the Fisher grid and
-fixes the meta weights to $(1,0)$. We also report a fixed practical
-multiplier of 16. It was selected from the prespecified severe-temperature
-and boundary-shift sweep, then held fixed for the remaining full runs.
+The target is $\varepsilon=0.1$. The Fisher grid has 125 points. The calibration step is $\varepsilon/4$, and the meta step is $\varepsilon^2/(8M)$. The equal-size uniform baseline shares the Fisher endpoints and number of points. Calibration-only uses the Fisher grid and fixes the meta weights to $(1,0)$. We also report a fixed practical multiplier of 16. It was selected from the prespecified severe-temperature and boundary-shift sweep, then held fixed for the remaining full runs.
 
-Our online-SGD Platt baseline maintains a slope and intercept on the clipped
-hint logit. It uses learning rate
-$0.02/\sqrt{1+t/2000}$, clips gradient coordinates to $[-10,10]$, and
-rounds each output to the nearest Fisher node. This is not the online Newton
-step implementation analyzed by \citet{gupta2023online}. For a direct
-comparison to their calibeating wrapper, HOPS runs an independent Foster
-1999 randomized game inside each of ten bins of our continuous SGD-Platt
-expert, with the expert-bin midpoint as the preferred output. The prefix
-histogram has
-$\lceil1/\varepsilon\rceil$ hint bins, a one-pseudocount prior at the bin
-center, and the same output rounding. These simple adaptive baselines are
-included as empirical references, not as implementations of the strongest
-possible post-hoc calibration methods.
+Our online-SGD Platt baseline maintains a slope and intercept on the clipped hint logit. It uses learning rate $0.02/\sqrt{1+t/2000}$, clips gradient coordinates to $[-10,10]$, and rounds each output to the nearest Fisher node. This is not the online Newton step implementation analyzed by \citet{gupta2023online}. For a direct comparison to their calibeating wrapper, HOPS runs an independent Foster 1999 randomized game inside each of ten bins of our continuous SGD-Platt expert, with the expert-bin midpoint as the preferred output. The prefix histogram has $\lceil1/\varepsilon\rceil$ hint bins, a one-pseudocount prior at the bin center, and the same output rounding. These simple adaptive baselines are included as empirical references, not as implementations of the strongest possible post-hoc calibration methods.
 
 \begin{table}[h]
 \centering
@@ -1221,8 +738,7 @@ Fisher nodes & .0000 & .0006 & .0197 & .0093 & .5872 & .0010 & .0000 & .0000\\
 \begin{table}[h]
 \centering
 \caption{Prespecified Fisher-grid meta-step frontier. The multiplier is
-relative to $\varepsilon^2/(8M)$. Entries are means over five seeds.
-Parentheses give standard errors.}
+relative to $\varepsilon^2/(8M)$. Entries are means over five seeds. Parentheses give standard errors.}
 \label{tab:frontier}
 \scriptsize
 \begin{tabular}{rrrrr}
@@ -1243,31 +759,13 @@ Multiplier & $\calK_1$ & Log excess & $\calK_1$ & Log excess\\
 \end{tabular}
 \end{table}
 
-The curve confirms that the conservative default does not reflect an
-inherent calibration-loss conflict on these streams. Increasing the meta
-step first improves both objectives. At the largest multiplier, the meta
-weight saturates near calibration and log loss begins to worsen on the
-severe-temperature stream. The equal-size uniform grid traces a similar
-curve. Its complete values are included in the machine-readable output.
-After selecting 16 from these two streams, we ran that multiplier once on
-all six controlled streams and on CIFAR-10. Those results appear in
-Tables~\ref{tab:synthetic-k1-full}, \ref{tab:synthetic-excess-full}, and
-\ref{tab:cifar-seeds}.
+The curve confirms that the conservative default does not reflect an inherent calibration-loss conflict on these streams. Increasing the meta step first improves both objectives. At the largest multiplier, the meta weight saturates near calibration and log loss begins to worsen on the severe-temperature stream. The equal-size uniform grid traces a similar curve. Its complete values are included in the machine-readable output. After selecting 16 from these two streams, we ran that multiplier once on all six controlled streams and on CIFAR-10. Those results appear in Tables~\ref{tab:synthetic-k1-full}, \ref{tab:synthetic-excess-full}, and \ref{tab:cifar-seeds}.
 
-The synthetic data seeds are $10{,}000j+s$ for stream index $j$ and
-$s\in\{0,\ldots,4\}$. Learner seeds are disjoint offsets. The CIFAR stream
-uses five seeds for both permutation and learner randomness.
+The synthetic data seeds are $10{,}000j+s$ for stream index $j$ and $s\in\{0,\ldots,4\}$. Learner seeds are disjoint offsets. The CIFAR stream uses five seeds for both permutation and learner randomness.
 
 \subsection{CIFAR-10 provenance}
 
-The features are fixed outputs of the public
-\texttt{openai/clip-vit-base-patch32} encoder. We use CIFAR-10 training and
-test labels 3 and 5 for cat and dog. The feature vectors are
-$\ell_2$-normalized. A logistic regression head with $C=1$, the L-BFGS
-solver, and a 2,000-iteration cap is fit once on 10,000 training examples.
-It converges in 23 iterations. The 2,000 test examples are permuted and
-replayed for 100 passes per seed. Starting after 100,000 examples, each
-observed label is flipped independently with probability $0.2$.
+The features are fixed outputs of the public \texttt{openai/clip-vit-base-patch32} encoder. We use CIFAR-10 training and test labels 3 and 5 for cat and dog. The feature vectors are $\ell_2$-normalized. A logistic regression head with $C=1$, the L-BFGS solver, and a 2,000-iteration cap is fit once on 10,000 training examples. It converges in 23 iterations. The 2,000 test examples are permuted and replayed for 100 passes per seed. Starting after 100,000 examples, each observed label is flipped independently with probability $0.2$.
 
 \subsection{Per-seed CIFAR-10 results}
 
@@ -1305,18 +803,8 @@ observed label is flipped independently with probability $0.2$.
 \section{High-probability boundary}
 \label{app:high-prob}
 
-The mixed oracle inequality is pathwise. Ordinary calibration uses sampled
-point-mass reports, whose deviation from the mixed calibration vector can be
-handled by standard finite-grid martingale concentration at the expected
-horizon. Log loss is subtler. Between the first two Fisher nodes, the
-realized loss difference on the rare label can be constant even though its
-conditional expectation is $O(\varepsilon^2)$. A bound based only on the
-range therefore needs $T=\Omega(\varepsilon^{-4})$ to control average
-realized loss at scale $\varepsilon^2$.
+The mixed oracle inequality is pathwise. Ordinary calibration uses sampled point-mass reports, whose deviation from the mixed calibration vector can be handled by standard finite-grid martingale concentration at the expected horizon. Log loss is subtler. Between the first two Fisher nodes, the realized loss difference on the rare label can be constant even though its conditional expectation is $O(\varepsilon^2)$. A bound based only on the range therefore needs $T=\Omega(\varepsilon^{-4})$ to control average realized loss at scale $\varepsilon^2$.
 
-Possible routes to a near-optimal high-probability theorem include a
-conditional-variance analysis tied to the oracle's mixing coefficient and a
-correlated rounding scheme. We have not proved either route. All theorems in
-the main paper are explicitly in expectation.
+Possible routes to a near-optimal high-probability theorem include a conditional-variance analysis tied to the oracle's mixing coefficient and a correlated rounding scheme. We have not proved either route. All theorems in the main paper are explicitly in expectation.
 
 \end{document}
